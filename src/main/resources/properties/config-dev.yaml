@@ -1,0 +1,13 @@
+api:
+  id: ""
+
+salesforce-sapi:
+  host: "caminho-salesforce-sapi-dev-5d2f7d.f12twh.usa-e2.cloudhub.io"
+  port: "443"
+  timeout: "30000"
+
+dealernet-sapi:
+  host: "caminho-dealernet-sapi-dev-5d2f7d.f12twh.usa-e2.cloudhub.io"
+  port: "443"
+  timeout: "30000"
+  basePath: "/api"

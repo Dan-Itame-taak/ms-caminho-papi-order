@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
+	<sub-flow name="send-employee-shift" doc:id="11138853-feb5-4f3c-8576-d927fac20d92" >
+		<logger level="INFO" doc:name="Logger Before Request" doc:id="7f20d155-277d-4b12-ba71-d25478bed0eb" message="Integration: send-employee-shift | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]"/>
+		<salesforce-sapi:send-emploeeys-shifts doc:name="Send Emploeeys Shifts" doc:id="a967c6a1-8118-4105-85a7-48961b3cb028" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+	</sub-flow>
+	<sub-flow name="search-recordType-salesforce" doc:id="8c21fd3f-5f6b-4348-a522-85862791ddbe" >
+		<logger level="INFO" doc:name="Logger" doc:id="9b18ed0c-fdfe-44c2-9c55-d796b9d600c0" message="Integration: search-recordType | correlationId: #[correlationId] | Object: #[vars.object] | Name: #[vars.name]"/>
+		<salesforce-sapi:retrieve-id-of-recordtype doc:name="Retrieve ID of RecordType" doc:id="c641324d-268f-4c0a-ba96-f388211558b6" config-ref="Salesforce_sapi_Config" object="#[vars.object]" sc-name="#[vars.name]" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+	</sub-flow>
+	<sub-flow name="send-employees-schedulling" doc:id="fb907e24-7bda-49df-aa7e-872a17fd1a24" >
+		<logger level="INFO" doc:name="Logger Before Request" doc:id="3edd3147-cea2-4f9e-ba37-31b98452fef2" message="Integration: send-employee-schedulling | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]" />
+		<salesforce-sapi:send-scheduling-request doc:name="Send Scheduling Request" doc:id="b6855bc3-6f1a-475d-9148-9b6a70c14db1" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" config-ref="Salesforce_sapi_Config"/>
+	</sub-flow>
+	<sub-flow name="send-os-status-to-salesforce" doc:id="d2087a5f-e451-4202-8611-2ee773eada77" >
+		<logger level="INFO" doc:name="Logger Before Request" doc:id="a9761644-c2ac-4a7e-af75-7668d793c129" message="Integration: send-os-status | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]"/>
+		<salesforce-sapi:create-service-order doc:name="Create service order" doc:id="032447b3-26ec-41b4-aa01-9b8818ba208e" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+	</sub-flow>
+	<sub-flow name="send-os-lineItems-to-salesforce" doc:id="f4637ef2-e2df-47ba-acc8-d3a5dcc7dd95" >
+		<logger level="INFO" doc:name="Logger Before Request" doc:id="7e2cab2a-9409-4d9d-8ce2-751e42544a7a" message="Integration: send-os-lineItems | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]"/>
+		<salesforce-sapi:send-service-order-line-items doc:name="Send Service Order Line Items" doc:id="3685f12b-b448-42fa-a788-3d48378fc2c1" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" config-ref="Salesforce_sapi_Config">
+			<salesforce-sapi:send-service-order-line-items-request-data ><![CDATA[#[vars.vPayload]]]></salesforce-sapi:send-service-order-line-items-request-data>
+		</salesforce-sapi:send-service-order-line-items>
+	</sub-flow>
+</mule>

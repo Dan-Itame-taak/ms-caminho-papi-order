@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="send-aditional-services-to-salesforce" doc:id="59024699-4f10-4443-9299-b8a072e52058" >
+		<scheduler doc:name="Scheduler" doc:id="fc40ad1d-a03c-44b6-84d1-66863ba86e88" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="60" timeUnit="MINUTES" startDelay="10"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger Start Aditional Services Flow" doc:id="096931a5-e608-40a2-a279-70bf18e28881" message="Integration: aditional-services | Checkpoint: Start  | correlationId: #[correlationId]" />
+		<dealernet-sapi:get-additional-services-list doc:name="Get Additional Services List" doc:id="0110343d-ef64-4f13-810e-1938309099a8" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" config-ref="Dealernet_sapi_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="a6d4291c-fc67-479c-bd18-ab00c217caba" >
+			<ee:message>
+				<ee:set-payload resource="dwl/map-aditional-services.dwl" />
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="globalError_Router" />
+	</flow>
+</mule>

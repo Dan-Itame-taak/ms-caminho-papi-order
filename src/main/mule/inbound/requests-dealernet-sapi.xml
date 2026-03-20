@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="get-employees-shifts" doc:id="219a64cb-0547-43b7-902c-c60029a1ccf2" >
+		<logger level="INFO" doc:name="Logger" doc:id="96828ace-4cf5-4000-87cf-066b27c7b772" />
+		<dealernet-sapi:get-emploeeys-shifts doc:name="Get Emploeeys Shifts" doc:id="b095810e-66c5-468b-b5bf-bb66fd90938a" config-ref="Dealernet_sapi_Config" department="#[vars.department]" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<ee:transform doc:name="Response Payload" doc:id="f85f54a9-3259-487f-8ba5-896504e804fc" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="get-employees-scheduling-status" doc:id="89360ee8-320e-48e7-ac3b-e25f2088f903" >
+		<logger level="INFO" doc:name="Logger" doc:id="d8a36551-68da-4a2b-9221-3c2e6af48d17" />
+		<dealernet-sapi:get-scheduling-status doc:name="Get Scheduling Status" doc:id="59b51e12-0ceb-4201-90f7-00100be4a274" config-ref="Dealernet_sapi_Config" department="#[vars.department]" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" company="#[vars.company]"/>
+		<ee:transform doc:name="Response Payload" doc:id="54cd7333-dfb8-466c-975a-69a67be1016e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="get-service-order-status" doc:id="bf7cda13-c5f6-4b25-b239-30bf5e10ed19" >
+		<logger level="INFO" doc:name="Logger" doc:id="307c6cd8-e642-4184-a519-9157d21e57e1" />
+		<dealernet-sapi:get-service-order-status doc:name="Get service order status" doc:id="048f8be9-0972-4f82-965f-3ccaf9ca4b80" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<ee:transform doc:name="Response Payload" doc:id="cfbaa578-e3bf-4c37-a9ef-6e77a965ef6c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>

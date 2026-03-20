@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+	<flow name="send-employees-shifts-to-salesforce" doc:id="59f02b15-c455-485f-a622-8266b1358fe4" >
+		<scheduler doc:name="Scheduler" doc:id="b43fad1d-b10d-4c9e-bd86-b8f645704e72" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="890c4a6a-e912-4c0f-b73c-3e35e54a60ab">
+			<route>
+				<ee:transform doc:name="Variables to Get Mechanics Shifts and recordType" doc:id="fe4a6086-abd7-4c2f-b050-79a1bd2a204b">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="department"><![CDATA[%dw 2.0
+output application/json
+---
+"mechanic"]]></ee:set-variable>
+						<ee:set-variable variableName="object"><![CDATA[%dw 2.0
+output application/json
+---
+"Seller__c"]]></ee:set-variable>
+						<ee:set-variable variableName="name"><![CDATA[%dw 2.0
+output application/json
+---
+"Produtivo"]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<flow-ref doc:name="search-recordType-salesforce" doc:id="07d3bd8f-d73b-4f13-8c6c-4db7b177ee2f" name="search-recordType-salesforce" target="rTypeMech" />
+				<flow-ref doc:name="get-employees-shifts" doc:id="f5b661aa-ada0-48f0-b5f3-2d1b9d1d9f9c" name="get-employees-shifts" />
+				<ee:transform doc:name="Filter Duplicated Records" doc:id="295a2971-d531-43df-a4ec-2447a5d0d1b8">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload distinctBy $."prodCode"]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="employees-batch" doc:id="fb1e3a68-3507-4be8-a5e9-dfe1edb633a7" name="employees-batch"/>
+			</route>
+			<route>
+				<ee:transform doc:name="Variables to Get Consultants Shifts and recordType" doc:id="2bd56cf0-f8da-4347-9367-d514fa8c77d5">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="department"><![CDATA[%dw 2.0
+output application/json
+---
+"consultant"]]></ee:set-variable>
+						<ee:set-variable variableName="object"><![CDATA[%dw 2.0
+output application/json
+---
+"Seller__c"]]></ee:set-variable>
+						<ee:set-variable variableName="name"><![CDATA[%dw 2.0
+output application/json
+---
+"Consultor"]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<flow-ref doc:name="search-recordType-salesforce" doc:id="838f9cf4-62c5-4d49-937d-97bbf64ebf7a" name="search-recordType-salesforce" target="rTypeCons" />
+				<flow-ref doc:name="get-employees-shifts" doc:id="826e6eaf-a0d3-459c-9cd4-43b7f6fc1f64" name="get-employees-shifts" />
+				<ee:transform doc:name="Filter Duplicated Records" doc:id="91462f2f-109e-4185-a4c2-a156689b5970">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload distinctBy $."consultCode"
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="employees-batch" doc:id="ea0c6ad8-fb87-4ad7-a431-d5223e7f1382" name="employees-batch"/>
+			</route>
+		</scatter-gather>
+		<ee:transform doc:name="Flatten Payload" doc:id="ee5e444e-f152-44b4-b9c4-81d83c8384f8">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+flatten(valuesOf(payload) map ((item, index) -> item.*payload))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="globalError_Router" />
+	</flow>
+	<flow name="employees-batch" doc:id="3f092c57-cc65-4066-ac63-7dec3949505e" >
+		<batch:job jobName="employees-shiftsBatch_Job" doc:id="459a367b-fcbc-4e39-8a56-5ca45953173a" maxFailedRecords="-1" blockSize="1000">
+			<batch:process-records>
+				<batch:step name="Batch_Step" doc:id="1b8a2841-ebf5-4115-b318-73d6a1d8f376">
+					<ee:transform doc:name="Map Employees Shifts Payload" doc:id="e0663f0a-bb69-4d20-ba71-0ad3ad109dc6">
+						<ee:message>
+							<ee:set-payload resource="dwl/map-employees-shift.dwl" />
+						</ee:message>
+					</ee:transform>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="cae0876d-bdd0-4ef3-b284-86a4ea0da39c" size="200" preserveMimeTypes="true">
+						<ee:transform doc:name="Aggregate Payload" doc:id="70914753-b026-4502-9693-a181adf4437e">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	allOrNone: "false",
+	records: payload
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<flow-ref doc:name="send-employee-shift" doc:id="22f5617a-6ab6-4545-9f11-ff51f3ed84f7" name="send-employee-shift" />
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete>
+				<ee:transform doc:name="Results" doc:id="c06b79b6-8375-45c4-beb0-c55cd1e93cab">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger results" doc:id="92beedc5-f033-49a7-9b52-bbc37cc9e620" message="#[payload]" />
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	<flow name="send-employees-scheduled-agenda-to-salesforce" doc:id="f6138cc8-4738-4989-9324-fbd16db835f6" >
+		<scheduler doc:name="Scheduler 15 Minutes" doc:id="d740f13c-bf75-4d1c-9610-a8398fc01c29" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="15" startDelay="10" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="e9827647-1b94-47e0-8ac0-e54bef122c8d" >
+			<route >
+				<ee:transform doc:name="Variables to Get Consultants Schedulling and recordType" doc:id="fff9c87d-69dc-4d4f-937c-c5ce6a7bf897">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="department"><![CDATA[%dw 2.0
+output application/json
+---
+"consultant"]]></ee:set-variable>
+				<ee:set-variable variableName="object"><![CDATA[%dw 2.0
+output application/json
+---
+"scheduling__c"]]></ee:set-variable>
+				<ee:set-variable variableName="name"><![CDATA[%dw 2.0
+output application/json
+---
+"Consultor"]]></ee:set-variable>
+						<ee:set-variable variableName="company" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.queryParams.company]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+				<flow-ref doc:name="search-recordType-salesforce" doc:id="99fb1e36-63f5-42d8-8fa8-6f43a920784a" name="search-recordType-salesforce" target="rTypeCons"/>
+				<flow-ref doc:name="get-employees-scheduling-status" doc:id="7401a2ae-6b1e-4399-8dc5-2bf2787e754f" name="get-employees-scheduling-status"/>
+				<flow-ref doc:name="employees-scheduling-batch" doc:id="a27d9099-357a-4c0d-9fb4-7a8cadc022ee" name="employees-scheduling-batch"/>
+			</route>
+			<route >
+				<ee:transform doc:name="Variables to Get Mechanics Scheduliing and recordType" doc:id="65e8e8c8-2c31-4114-802a-b6f4dfa65c56">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="department"><![CDATA[%dw 2.0
+output application/json
+---
+"mechanic"]]></ee:set-variable>
+				<ee:set-variable variableName="object"><![CDATA[%dw 2.0
+output application/json
+---
+"scheduling__c"]]></ee:set-variable>
+				<ee:set-variable variableName="name"><![CDATA[%dw 2.0
+output application/json
+---
+"Produtivo"]]></ee:set-variable>
+						<ee:set-variable variableName="company" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.queryParams.company]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+				<flow-ref doc:name="search-recordType-salesforce" doc:id="22ee7e2c-24e6-4704-ab2a-5b0d52d5511c" name="search-recordType-salesforce" target="rTypeCons"/>
+				<flow-ref doc:name="get-employees-scheduling-status" doc:id="7c4dfe88-6086-436d-b814-61017d25147e" name="get-employees-scheduling-status"/>
+				<flow-ref doc:name="employees-scheduling-batch" doc:id="981581ea-7f6b-4f1c-8728-2ddce67e29ad" name="employees-scheduling-batch"/>
+			</route>
+		</scatter-gather>
+		<error-handler ref="globalError_Router" />
+	</flow>
+	<flow name="employees-scheduling-batch" doc:id="bc22e0d8-33b0-46c6-a2cc-95cec8169044" >
+		<batch:job jobName="employeesBatch_Job" doc:id="199e81e6-443f-4f52-b295-85b84981fb1d" blockSize="1000" maxFailedRecords="-1">
+			<batch:process-records >
+				<batch:step name="Batch_Step1" doc:id="b9212802-a3bc-4e80-a45d-927b3a449544" >
+					<ee:transform doc:name="Map Employees Scheduling Payload" doc:id="30cdb763-3a90-4ca8-8390-f29630955956" >
+						<ee:message>
+							<ee:set-payload resource="dwl/map-employees-schedulling.dwl" />
+						</ee:message>
+					</ee:transform>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="1bfb1aea-68c1-44af-bbdd-780c3fb4ffb3" size="200" preserveMimeTypes="true">
+						<ee:transform doc:name="Aggregate Payload" doc:id="5212198a-a38c-45fc-9fc1-ba0a622a3bb2" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	allOrNone: "false",
+	records: payload
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<flow-ref doc:name="send-employees-schedulling" doc:id="a8fd60b9-168b-4173-bfac-58cfa5a8c386" name="send-employees-schedulling"/>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+	</flow>
+</mule>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
+	<flow name="send-type-os-to-salesforce" doc:id="5e940e53-4756-4fed-baf8-01e6af4891e1" >
+		<scheduler doc:name="Scheduler" doc:id="35041a20-1a70-40ee-ab6d-59bc5a66ae10" >
+			<scheduling-strategy >
+				<cron expression="0 0 8 * * ?" timeZone="America/Sao_Paulo"/>
+			</scheduling-strategy>
+		</scheduler>
+		<dealernet-sapi:get-os-types doc:name="Get OS Types" doc:id="9b954ce6-0712-4729-80cc-4a6beccf8357" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<logger level="INFO" doc:name="Logger After Get Type OS" doc:id="9fae91ec-39e8-437e-b55b-a5c6781cf343" message="Integration: send-type-os-salesforce | correlationId: #[correlationId] | payload: #[payload]"/>
+		<batch:job jobName="type-osBatch_Job" doc:id="b80f81a0-1e53-4542-ba2a-3ca1d65e0888" maxFailedRecords="-1" maxConcurrency="2" blockSize="1000">
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="97efc79a-bb23-453a-9e45-7d9a18934453" >
+					<ee:transform doc:name="Map Type OS Payload" doc:id="72a0fb80-1232-492a-9975-41588852ec0e" >
+						<ee:message>
+							<ee:set-payload resource="dwl/map-type-os.dwl" />
+						</ee:message>
+					</ee:transform>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="59f3196f-953b-4666-a031-039d435858d6" preserveMimeTypes="true" size="200">
+						<ee:transform doc:name="Aggregate Payload" doc:id="0c2d2078-be83-4c4e-b097-ae0f38004cda" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	allOrNone: false,
+	records: payload
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<salesforce-sapi:send-os-types doc:name="Send OS Types" doc:id="d936e991-46f3-4d1d-a72e-b8af9e7a36df" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<ee:transform doc:name="Results" doc:id="a9561c6b-dfc8-417e-a7fe-4179718f4659" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</batch:on-complete>
+		</batch:job>
+		<logger level="INFO" doc:name="Logger Results" doc:id="a789037e-0694-4683-8cc6-3efc6c1112db" message="#[payload]"/>
+		<error-handler ref="globalError_Router" />
+	</flow>
+</mule>

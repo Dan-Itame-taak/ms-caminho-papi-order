@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
+	<flow name="send-payment-method-to-salesforce" doc:id="02c7e3e4-14ed-4ed6-b1f1-2440c010f420" >
+		<scheduler doc:name="Scheduler" doc:id="9407c972-4115-4158-8b25-b6ad65ca4e04" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="60" startDelay="1" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger Start Payment Method Flow" doc:id="a5abedbf-8bdd-441d-a6de-baf2199d08b3" message="Integration: payment-methods | Checkpoint: Start  | correlationId: #[correlationId]"/>
+		<dealernet-sapi:get-payment-method-list doc:name="Get Payment Method List" doc:id="24bf2cf2-d1b7-4b6d-8187-00e70373144d" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<ee:transform doc:name="Map Payment Method Payload to Salesforce" doc:id="bc676163-937f-4591-b249-1762202d1fd1" >
+			<ee:message>
+				<ee:set-payload resource="dwl/map-payment-methods.dwl" />
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger After Map Payload" doc:id="cc6fbbe6-3fd8-40d4-b7d0-e32b7bf9bbac" message="ntegration: payment-methods | Checkpoint: After Mapping / Before Request to SF  | correlationId: #[correlationId] | payload: #[payload]"/>
+		<salesforce-sapi:create-payment-method doc:name="Create payment method" doc:id="d2d6aa3c-c25f-4eb6-ae3b-a76053d5cbf4" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+		<logger level="INFO" doc:name="Logger End Payment Method Flow" doc:id="9ca3a1f7-0a42-45df-b566-e8a5fee7d889" message="ntegration: payment-methods | Checkpoint: End   | correlationId: #[correlationId] | payload: #[payload]"/>
+		<error-handler ref="globalError_Router" />
+	</flow>
+</mule>
