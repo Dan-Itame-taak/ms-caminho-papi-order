@@ -3,7 +3,7 @@
     <http:listener-config name="order-papi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
-    <apikit:config name="order-papi-config" api="resource::3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4:order-papi:1.0.0:raml:zip:order-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="order-papi-config" api="resource::3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4:order-papi:1.0.3:raml:zip:order-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <flow name="order-papi-main">
         <http:listener config-ref="order-papi-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
@@ -127,15 +127,37 @@ output application/json
         <logger level="INFO" message="get:\proposal:order-papi-config" />
     </flow>
     <flow name="post:\proposal:application\json:order-papi-config">
-        <logger level="INFO" message="post:\proposal:application\json:order-papi-config" />
+        <flow-ref doc:name="send-proposal-to-dealernet-subflow" doc:id="a665a756-a0e5-41ac-bb18-9147d66063a4" name="send-proposal-to-dealernet-subflow" />
     </flow>
     <flow name="post:\register-service:application\json:order-papi-config">
         <logger level="INFO" message="post:\register-service:application\json:order-papi-config" />
     </flow>
     <flow name="post:\service-order:application\json:order-papi-config">
-		<logger level="INFO" doc:name="Logger" doc:id="aaae9c73-0c81-4f96-ac49-4bfc3ad82335" />
+        <flow-ref doc:name="send-consultant-and-productive-appointment-to-dealer" doc:id="16d553fa-05fc-422e-8836-1d7673be5f99" name="send-consultant-and-productive-appointment-to-dealer" />
     </flow>
     <flow name="post:\used-valuation:application\json:order-papi-config">
-        <logger level="INFO" message="post:\used-valuation:application\json:order-papi-config" />
+        <flow-ref doc:name="send-used-evaluation-to-dealernet-subflow" doc:id="c85dd20e-f824-42a4-abdd-49b19592ba66" name="send-used-evaluation-to-dealernet-subflow" />
+    </flow>
+    <flow name="post:\appointment:application\json:order-papi-config">
+        <logger level="INFO" message="post:\appointment:application\json:order-papi-config" />
+    </flow>
+    <flow name="post:\backup-car:application\json:order-papi-config">
+        <flow-ref doc:name="send-backup-car-to-dealernet-subflow" doc:id="ed3bf3a1-89b2-4194-83b6-582377247e25" name="send-backup-car-to-dealernet-subflow" />
+    </flow>
+    <flow name="put:\proposal\(id):application\json:order-papi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="put:\proposal\(id):application\json:order-papi-config" />
+    </flow>
+    <flow name="delete:\proposal\(id):order-papi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="delete:\proposal\(id):order-papi-config" />
     </flow>
 </mule>

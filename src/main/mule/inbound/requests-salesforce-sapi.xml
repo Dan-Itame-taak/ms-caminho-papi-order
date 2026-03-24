@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
+<mule xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd">
 	<sub-flow name="send-employee-shift" doc:id="11138853-feb5-4f3c-8576-d927fac20d92" >
 		<logger level="INFO" doc:name="Logger Before Request" doc:id="7f20d155-277d-4b12-ba71-d25478bed0eb" message="Integration: send-employee-shift | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]"/>
 		<salesforce-sapi:send-emploeeys-shifts doc:name="Send Emploeeys Shifts" doc:id="a967c6a1-8118-4105-85a7-48961b3cb028" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
@@ -25,5 +27,356 @@ http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/sche
 		<salesforce-sapi:send-service-order-line-items doc:name="Send Service Order Line Items" doc:id="3685f12b-b448-42fa-a788-3d48378fc2c1" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" config-ref="Salesforce_sapi_Config">
 			<salesforce-sapi:send-service-order-line-items-request-data ><![CDATA[#[vars.vPayload]]]></salesforce-sapi:send-service-order-line-items-request-data>
 		</salesforce-sapi:send-service-order-line-items>
+	</sub-flow>
+	<sub-flow name="send-consultant-and-productive-appointment-to-dealer" doc:id="68438a0c-03ab-40aa-9328-daaa80d807a7" >
+		<ee:transform doc:name="workOrderId" doc:id="fc3fb868-0390-4157-abc7-195c60154c03" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="workOrderId" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:get-service-order-status doc:name="Get service order status" doc:id="083f3185-ff1a-4fc9-bf6b-763bd6feaf46" config-ref="Salesforce_sapi_Config" id="#[vars.workOrderId]"/>
+		<ee:transform doc:name="Payload send to Dealernet" doc:id="40d2920d-d518-41f5-82ed-295952b9ea44" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="workOrderRecords" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.compositeResponse.body.records[0]]]></ee:set-variable>
+				<ee:set-variable variableName="schedulingRecords" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.compositeResponse.body.records[1]]]></ee:set-variable>
+				<ee:set-variable variableName="productiveRequest" ><![CDATA[%dw 2.0
+output application/json
+
+var lineItems = payload.compositeResponse.body[3].records default []
+
+var productiveScheduling = payload.compositeResponse.body[2].records[0]
+---
+lineItems map (lineItem) -> {
+    "OficinaServico_Codigo": productiveScheduling.Seller__r.Store__r.ExternalId__c,
+    "OficinaServico_OSCod": lineItem.WorkOrderId,
+    "OficinaServico_AgendamentoCod": productiveScheduling.ExternalId__c,
+    "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
+    "OficinaServico_TMOCod": lineItem.TMO__r.ExternalId__c,
+    "OficinaServico_Qtde": lineItem.Quantity,
+    "OficinaServico_Horas": lineItem.DurationTime__c,
+    "OficinaServico_ValorUnitario": lineItem.TotalPrice,
+    "OficinaServico_PercDesconto": lineItem.Discount,
+    "OficinaServico_CobrarCliente": lineItem.TmoCharges__c,
+    "OficinaServico_ExecutarOficina": lineItem.TmoExecutes__c,
+    "OficinaServico_DescricaoProblemaSolucao": productiveScheduling.campo,
+    "OficinaServico_UsuarioCodResponsavel": productiveScheduling.Seller__r.ExternalId__c,
+    "OficinaServico_ExigeTesteVeiculo": lineItem.TmoRequiresTest__c,
+    "OficinaServico_SetorExecucao": lineItem.ExecutionSector__c,
+}]]></ee:set-variable>
+				<ee:set-variable variableName="consultantRequest" ><![CDATA[%dw 2.0
+output application/json
+
+var workOrder = payload.compositeResponse.body[0].records[0]
+
+var scheduling = payload.compositeResponse.body[1].records[0]
+---
+{
+    "codigoAgendamento": scheduling.Externald__c,
+    "codigoEmpresa": workOrder.Store__r.DealerNetExternalId__c,
+    "codigoConsultor": workOrder.Owner.DealerNetCode__c,
+    "dataAgendamento": scheduling.StartDate__c,
+    "placa": workOrder.Asset.Plate__c,
+    "codigoModeloVeiculo": workOrder.Asset.ModelCode__c,  
+    //"codigoProspect": workOrder.Store__r.DealerNetExternalId__c,
+    "codigoCliente": workOrder.Account.DealerNetExternalId__c,
+//    "codigoVeiculo": workOrder.Store__r.DealerNetExternalId__c,
+//    "horarioChegada": workOrder.Store__r.DealerNetExternalId__c,
+    "observacao": workOrder.Description,
+    "tipo": workOrder.Type__c,
+    "status": scheduling.Status__c,
+//    "codigoAtendimento": workOrder.Store__r.DealerNetExternalId__c,
+//    "numeroPreOrdem": workOrder.Store__r.DealerNetExternalId__c,
+//    "motivoConsultor": workOrder.Store__r.DealerNetExternalId__c,
+//    "codigoApoioUsuario": workOrder.Store__r.DealerNetExternalId__c,
+    "clienteAguarda": workOrder.CustomerWaiting__c,
+    "exigeLavagem": workOrder.RequiresWashing__c,
+//    "entregaDomicilio": workOrder.Store__r.DealerNetExternalId__c,
+    "km": workOrder.Store__r.CurrentMileage__c,
+    "clienteDesejaTransporte": workOrder.CustomerNeedsTransport__c,
+    "clienteServicoValet": workOrder.ValetService__c,
+    "servicoExpresso": workOrder.ExpressService__c,
+    "veiculoAno": workOrder.Asset.YearOfManufacture__c,
+    //"codigoGrupoAgendamento": workOrder.Store__r.DealerNetExternalId__c,
+    "codigoTipoServico": workOrder.WorkOrderType__r.ExternalId__c,
+//    "mobilidade": workOrder.Store__r.DealerNetExternalId__c,
+//    "dataPreOrdem": workOrder.Store__r.DealerNetExternalId__c,
+    "chassiVeiculo": workOrder.Asset.Chassis__c,
+//    "dataPedidoPecasEspeciais": workOrder.Store__r.DealerNetExternalId__c,
+//    "dataPecasRecebidas": workOrder.Store__r.DealerNetExternalId__c,
+//    "rebocado": workOrder.Store__r.DealerNetExternalId__c,
+//    "levarPecasSubstituidas": workOrder.Store__r.DealerNetExternalId__c,
+//    "clienteRetorno": workOrder.Store__r.DealerNetExternalId__c,
+//    "responsavelPedidoPecasEspeciais": workOrder.Store__r.DealerNetExternalId__c,
+//    "responsavelPecasRecebidas": workOrder.Store__r.DealerNetExternalId__c,
+//    "valorObjetos": workOrder.Store__r.DealerNetExternalId__c,
+//    "observacaoIntegracao": workOrder.Store__r.DealerNetExternalId__c,
+    "inspecaoElevador": workOrder.LiftInspection__c,
+//    "partSequence": workOrder.Store__r.DealerNetExternalId__c,
+//    "horimet": workOrder.Store__r.DealerNetExternalId__c,
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123">
+			<dealernet-sapi:create-register-service-request-data ><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:create-register-service-request-data>
+		</dealernet-sapi:create-register-service>
+		<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123">
+			<dealernet-sapi:create-service-order-request-data ><![CDATA[#[vars.productiveRequest]]]></dealernet-sapi:create-service-order-request-data>
+		</dealernet-sapi:create-service-order>
+	</sub-flow>
+	<sub-flow name="send-proposal-to-dealernet-subflow" doc:id="05d5da8f-be9b-4bfb-9087-f2803ebebf3a" >
+		<ee:transform doc:name="orderId" doc:id="f29fd940-747b-4b57-8523-33963a9a2e7b">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="orderId" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Composite Salesforce WorkOrder Get informations" doc:id="d4a4ce70-2d84-48ea-a7e4-ec740b9a449a">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT Asset__r.ExternalId__c, Asset__r.ModelCode__c, Asset__r.Product2.Name, Asset__r.Product2.VehicleFamilyCode__c, Asset__r.StockCode__c, Asset__r.Version__c, CreatedDate, DealerNetServiceCode__c, Description, EffectiveDate, ExternalIdDealerNet__c, MainContact__r.ContactPreference__c, OrderNumber, Store__r.DealerNetExternalId__c, TotalAmount FROM Order WHERE Id = '"++ vars.orderId ++"'",
+      "referenceId": "OrderQuery"
+    },
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT ListPrice, OrderId, UnitPrice, Discount__c FROM OrderItem WHERE OrderId = '"++ vars.orderId ++"'",
+      "referenceId": "OrderItemsQuery"
+    },
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT ApprovedInstallmentAmount__c, CheckAgency__c, CheckingAccount__c, ConsortiumGroup__c, ConsortiumQuote__c, CreatedDate, Description__c, DueDate__c, FinancingBank__c, InterestAmount__c, LastModifiedDate, NumberInstallmentsApproved__c, Order__c, Order__r.Account.CPFCNPJ__c, PaymentCondition__r.ExternalId__c, PaymentCondition__r.Name, UsedVehicleEvaluation__r.VehiclePlate__c, UsedVehicleEvaluation__r.ExternalId__c FROM Installment__c WHERE Order__r.Id = '" ++ vars.orderId ++ "'",
+      "referenceId": "InstallmentsQuery"
+    }
+  ]
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="90dbbc0a-3f4a-4b96-a0f1-0e05f56c2403" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123">
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="d2c057d7-f417-46a1-b508-759664fb82d2" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="proposalRequest" ><![CDATA[%dw 2.0
+output application/json
+
+var orders = payload.compositeResponse.body[0].records[0]
+var lineItems = payload.compositeResponse.body[1].records[0]
+---
+{
+    "Proposta_EmpresaCod": orders.Store__r.DealerNetExternalId__c,
+    "Proposta_VeiculoCod": orders.Asset.ExternalId__c,
+    "Proposta_BancoPedidoCod": orders.campo,
+    "Proposta_Pedido": orders.OrderNumber,
+    "Proposta_Versao": orders.Asset.Version__c,
+    "Proposta_Valor": orders.TotalAmount,
+    "Proposta_DataValidade": orders.EffectiveDate,
+    "Proposta_EnviaEmail": orders.MainContact__r.ContactPreference__c,
+    "Proposta_SMS": orders.MainContact__r.ContactPreference__c,
+    "Proposta_EntregaPesquisaEmail": orders.MainContact__r.ContactPreference__c,
+    "Proposta_Observacao": orders.Description,
+    "Proposta_PercDescontoMax": lineItems.Discount__c,
+    "Atendimento_Codigo": orders.DealerNetServiceCode__c,
+    "Proposta_FamiliaVeiculoCod": orders.Asset.Product2.VehicleFamilyCode__c,
+    "Proposta_EstoqueCod": orders.Asset.StockCode__c,
+    "Proposta_VeiculoModeloCod": orders.Asset.ModelCode__c,
+    "Proposta_DataCriacao": orders.CreatedDate,
+    "Proposta_DataConfirmacao": orders.CreatedDate,
+    "Proposta_PrecoPublico": lineItems.ListPrice,
+    "Proposta_DataValidadePedido": orders.EffectiveDate,
+    "Proposta_VeiculoValor": lineItems.UnitPrice,
+    "Proposta_FinanceiraDes": orders.CreditAnalysis__r.FinancingBank__c,
+    "Proposta_ModeloVeiculoDes": orders.Asset.Product2.Name,
+    "Proposta_StatusFinancei": orders.ExternalIdDealerNet__c,
+}]]></ee:set-variable>
+				<ee:set-variable variableName="installmentsRequest" ><![CDATA[%dw 2.0
+output application/json
+var installments = payload.compositeResponse.body[2].records[0]
+---
+{
+    "codigoProposta": installments.Order__r.ExternalId__c,
+    "dataVencimento": installments.DueDate__c,
+    "valor": installments.ApprovedInstallmentAmount__c,
+    "observacao": installments.Description__c,
+    "valorJuros": installments.InterestAmount__c,
+    "numeroDocumento": installments.Order.Account.CPFCNPJ__c,
+    "codigoUsarioCriacao": installments.Owner.DealerNetCode__c,
+    "dataCriacao": installments.CreatedDate,
+    "codigoUsuarioAlteracao": installments.LastModifiedBy.DealerNetCode__c,
+    "dataAlteracao": installments.LastModifiedDate,
+    "codigoTipoParcela": installments.PaymentCondition__r.ExternalId__c,
+    "codigoAvaliacaoUsado": installments.UsedVehicleEvaluation__r.ExternalId__c,
+    "placaVeiculoUsado": installments.UsedVehicleEvaluation__r.VehiclePlate__c,
+    "grupoConsorcio": installments.ConsortiumGroup__c,
+    "cotaConsorcio": installments.ConsortiumQuote__c,
+    "parcelas": installments.NumberInstallmentsApproved__c,
+    "codigoBancoCheque": installments.FinancingBank__c,
+    "agenciaCheque": installments.CheckAgency__c,
+    "contaCorrenteCheque": installments.CheckingAccount__c, 
+    "codigoCondicaoPagamento": installments.PaymentCondition__r.ExternalId__c,
+    "codigoTipoDocumentoTEF": installments.PaymentCondition__r.Name,
+    "valorParcelasFinanciamento": installments.ApprovedInstallmentAmount__c,
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<dealernet-sapi:send-proposal doc:name="Send Proposal" doc:id="a6adb7b0-691e-4590-af20-7d8fb5271855" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
+		<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
+	</sub-flow>
+	<sub-flow name="send-backup-car-to-dealernet-subflow" doc:id="038f85a5-6bcd-4bd9-bd48-d8cf5d5d3c37" >
+		<ee:transform doc:name="assetId" doc:id="599184d1-bcba-4fc7-a0d8-00a9ca994c6c">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="assetId" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Composite Salesforce WorkOrder Get informations" doc:id="bd065bdb-5e89-4f79-9cf0-5e9a3fd220b0" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT BookingCode__c, ExternalId__c, Opportunity__r.DealerNetServiceCode__c, Opportunity__r.RecordType.Name, Price, ReservationDateTime__c, ReservationExpirationDateTime__c, Status FROM Asset WHERE Id = '" ++ vars.assetId ++ "'",
+      "referenceId": "AssetQuery"
+    }
+  ]
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="85fac94f-cc46-4318-962f-8366910b48fb" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123" >
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="e37121c4-10ce-48c3-9682-9ce457450feb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var asset = payload.compositeResponse.body[0].records[0]
+---
+{
+    "VeiculoReserva_Codigo": asset.BookingCode__c,
+    "VeiculoReserva_BancoPedidoCod": asset.Opportunity__r.RecordType.Name,
+    "VeiculoReserva_ValorEntrada": asset.Price,
+    "VeiculoReserva_DataInicial": asset.ReservationDateTime__c,
+    "VeiculoReserva_DataFinal": asset.ReservationExpirationDateTime__c,
+    "VeiculoReserva_Status": asset.Status,
+    "VeiculoReserva_VeiculoCod": asset.ExternalId__c,
+    "Atendimento_Codig": asset.Opportunity.DealerNetServiceCode__c,
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<dealernet-sapi:send-back-up-car doc:name="Send Back-up car" doc:id="5fcb3654-219c-4a50-baff-4379f39ffd0e" config-ref="Dealernet_sapi_Config"/>
+	</sub-flow>
+	<sub-flow name="send-used-evaluation-to-dealernet-subflow" doc:id="fb7d9512-1ecf-42e6-b2b7-4b949dff5d0c" >
+		<ee:transform doc:name="assesmentId" doc:id="9aa50517-1bd4-40e0-b3ff-8eb962bf6a4f" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="assesmentId" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Composite Salesforce WorkOrder Get informations" doc:id="bcb90d51-e080-4c61-9f55-304cb6822b10" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT CaminhoPrice__c, FipeValue__c, InformedValue__c, LastAutoAvaliarSync__c, ModelId__c, ModelYear__c, Name, PriceObservation__c, Renavam__c, Status__c, Store__r.ExternalId__c, ValuationGoal__c, ValuationObs__c, ValuationValue__c, VehicleColorId__c, VehicleMileage__c, VehiclePlate__c, VehicleVIN__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM AssessmentUsed__c WHERE Id = '" ++ vars.assesmentId ++ "'",
+      "referenceId": "AssessmentUsedQuery"
+    },
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT Order__c, Quote__r.Account.ExternalId__c, Quote__r.Opportunity.DealerNetServiceCode__c FROM Installment__c WHERE UsedVehicleEvaluation__c = '" ++ vars.assesmentId ++ "' LIMIT 1",
+      "referenceId": "InstallmentsQuery"
+    }
+  ]
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="16f6cff2-7f62-4607-96dd-c120c62e26a2" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123" >
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="19d5f87c-2c97-4b75-be32-f20ac3d28484" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var asset = payload.compositeResponse.body[0].records[0]
+
+var installment = payload.compositeResponse.body[1].records[0]
+---
+{
+	"AvaliacaoUsado_EmpresaCod": asset.Store__r.ExternalId__c,
+	"AvaliacaoUsado_Placa": asset.VehiclePlate__c,
+	"AvaliacaoUsado_ModeloVeiculoCod": asset.ModelId__c,
+	"AvaliacaoUsado_Kilometragem": asset.VehicleMileage__c,
+	"AvaliacaoUsado_CorCod_Externa": asset.VehicleColorId__c,
+	"AvaliacaoUsado_MotAvaliacaoCod": asset.PriceObservation__c,
+	"AvaliacaoUsado_Observacao": asset.ValuationObs__c,
+	"AvaliacaoUsado_PrecoCliente": asset.InformedValue__c,
+	"AvaliacaoUsado_PrecoAvaliacao": asset.ValuationValue__c,
+	"AvaliacaoUsado_ValorTOP": asset.FipeValue__c,
+	"AvaliacaoUsado_ValorSugeridoVenda": asset.CaminhoPrice__c,
+	"AvaliacaoUsado_Status": asset.Status__c,
+	"AvaliacaoUsado_VeiculoAnoCod": asset.ModelYear__c,
+	"AvaliacaoUsado_Chassi": asset.VehicleVIN__c,
+	"AvaliacaoUsado_NroRenavam": asset.Renavam__c,
+	"Atendimento_Codigo": installment.Quote__r.Opportunity.DealerNetServiceCode__c,
+	"AvaliacaoUsado_UsuarioCod": asset.Owner.DealerNetCode__c,
+	"AvaliacaoUsado_PessoaCodProprietario": installment.Quote__r.Account.ExternalId__c,
+	"AvaliacaoUsado_DataAvaliacao": asset.LastAutoAvaliarSync__c,
+	"AvaliacaoUsado_FinalidadeCompraCod": asset.ValuationGoal__c,
+	"AvaliacaoUsado_ValorSugeridoVendaSistema": asset.ValuationValue__c,
+	"AvaliacaoUsado_EstadoCod_Placa ": asset.VehiclePlate__c,
+	"AvaliacaoUsado_DiasLimiteEntradaNFUsados": asset.campos,
+	"AvaliacaoUsado_ValorTabela": asset.FipeValue__c,
+	"AvaliacaoUsado_SugeridoCompra": asset.ValuationValue__c,
+	"AvaliacaoUsado_SugeridoVenda": asset.CaminhoPrice__c,
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
 	</sub-flow>
 </mule>

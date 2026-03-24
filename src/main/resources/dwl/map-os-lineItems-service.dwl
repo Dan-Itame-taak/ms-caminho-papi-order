@@ -15,7 +15,7 @@ var finalMap = pluckedPayload map ((value, index) -> {
     ExecutionSector__c: value.setorServico,
     Quantitiy: value.quantidadeServico,
     TMO__r: {
-    	ExternalId__c: value.codigoServico
+    	ExternalId__c: value.codigoTMO
     },
     WorkOrderType__r: {
         ExternalId__c: value.codigoTipoOs
