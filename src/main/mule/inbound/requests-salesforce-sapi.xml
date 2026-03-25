@@ -418,4 +418,69 @@ var installment = payload.compositeResponse.body[1].records[0]
 		</ee:transform>
 		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
 	</sub-flow>
+	<sub-flow name="send-service-appointment-to-dealernet-subflow" doc:id="b6f17ce8-9ba8-4772-b330-d816105be679" >
+		<ee:transform doc:name="opportunityId" doc:id="975e6c74-4d95-4274-80e1-a24b943f3a30" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload.id]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="compositeRequest" doc:id="0a0b7079-895b-42bb-ad71-6d94c3b92c91" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT Store__r.DealerNetExternalId__c, CreatedDate, Description, DealerNetServiceCode__c, Asset__r.Plate__c, Asset__r.ExternalId__c, MainContact__r.Name, MainContact__r.Phone, MainContact__r.MobilePhone, MainContact__r.Email, Account.CPFCNPJ__c, Account.ClearedCPFCNPJ__c, Account.DealerNetExternalId__c, Owner.Name, Owner.DealerNetCode__c, Owner.Id, Opportunity.LeadSource, Opportunity.RecordType.Name, Opportunity.Id FROM Order WHERE Id = '" ++ vars.orderId ++ "'",
+      "referenceId": "OrderQuery"
+    }
+  ]
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="8075bd26-8878-49c3-a27c-5dcca52451ba" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123">
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Service Appointment Request" doc:id="bbb956e1-2687-4e93-af72-24ef979b2e12" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="serviceAppointmentRequest" ><![CDATA[%dw 2.0
+output application/json
+var order = payload.compositeResponse.body[0].records[0]
+---
+{
+    "Empresa": order.Store__r.DealerNetExternalId__c,
+    "Nome": order.MainContact__r.Name,
+    "DDD1": (order.MainContact__r.Phone default "")[0 to 1],
+    "Telefone1": (order.MainContact__r.Phone default "")[2 to -1],
+    "DDD2": (order.MainContact__r.MobilePhone default "")[0 to 1],
+    "Telefone2": (order.MainContact__r.MobilePhone default "")[2 to -1],
+    "PlacaVeiculo": order.Asset__r.Plate__c,
+    "VeiculoCodigo": order.Asset__r.ExternalId__c,
+    "DataHora": order.CreatedDate,
+    "Descricao": order.Description,
+    "Email": order.MainContact__r.Email,
+    "CNPJ": order.Account.CPFCNPJ__c,
+    "Usuario_Nome": order.Owner.Name,
+    "Usuario_Codigo": order.Owner.DealerNetCode__c,
+    "Usuario_Identificador": order.Owner.Id,
+    "Midia_Descricao": order.Opportunity.LeadSource,
+    "NaturezaAtendimento_Descricao": order.Opportunity.RecordType.Name,
+    "Atendimento_Codigo": order.DealerNetServiceCode__c,
+    "Documento": order.Account.ClearedCPFCNPJ__c,
+    "Pessoa_Codigo": order.Account.DealerNetExternalId__c,
+    "Assunto": order.Description,
+    "IdLeadExterno": order.Opportunity.Id
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
 </mule>
