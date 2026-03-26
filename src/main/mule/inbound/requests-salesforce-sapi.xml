@@ -40,8 +40,7 @@ payload.id]]></ee:set-variable>
 				<ee:set-variable variableName="aggregateProductiveResponses" ><![CDATA[%dw 2.0
 output application/java
 ---
-{
-}]]></ee:set-variable>
+[]]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<salesforce-sapi:get-service-order-status doc:name="Get service order status" doc:id="083f3185-ff1a-4fc9-bf6b-763bd6feaf46" config-ref="Salesforce_sapi_Config" id="#[vars.workOrderId]"/>
@@ -57,40 +56,6 @@ payload.compositeResponse.body.records[0]]]></ee:set-variable>
 output application/json
 ---
 payload.compositeResponse.body.records[1]]]></ee:set-variable>
-				<ee:set-variable variableName="productiveRequest" ><![CDATA[%dw 2.0
-output application/json
-
-var lineItems = payload.compositeResponse.body[3].records default []
-
-var productiveScheduling = payload.compositeResponse.body[2].records[0]
----
-lineItems map (lineItem) -> {
-    //"OficinaServico_OSCod": lineItem.WorkOrderId, --> validar com o Andrei, se em algum momento vai ser necessário criar a OS no Dealer
-    "OficinaServico_AgendamentoCod": productiveScheduling.ExternalId__c,
-    "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
-    "OficinaServico_TMOCod": lineItem.TMO__r.ExternalId__c, //Obrigatório
-    "OficinaServico_Qtde": lineItem.Quantity,
-    "OficinaServico_Horas": lineItem.DurationTime__c,
-    "OficinaServico_ValorUnitario": lineItem.TotalPrice,
-    "OficinaServico_PercDesconto": lineItem.Discount,
-    "OficinaServico_CobrarCliente": lineItem.TmoCharges__c,
-    "OficinaServico_ExecutarOficina": lineItem.TmoExecutes__c,
-    "OficinaServico_UsuarioCodResponsavel": productiveScheduling.Seller__r.ExternalId__c, //Mandar sem o produtivo_
-    "OficinaServico_SetorExecucao": "OFC",//lineItem.ExecutionSector__c, //Precisa ser OFC para o caso de Oficina. Precisa pegar o mapping do Dealer.
-    
-    "OficinaServico_DescricaoProblemaSolucao": productiveScheduling.Description, 
-    "OficinaServico_CustoPrevisto": 0, 
-    "OficinaServico_CustoReal": 0, 
-    "OficinaServico_ServicoRapido": 0,
-    "OficinaServico_SolicitadoCliente": productiveScheduling.CustomerRequest__c, //Está nulo, obrigatório
-    "OficinaServico_StatusAndamento": "ABE",
-    "OficinaServico_StatusDesconto": "PEN",
-    "OficinaServico_StatusExecucao": "PEN",
-    "OficinaServico_ExigeTesteVeiculo": lineItems.TMORequiresTest__c,
-    
-    //WorkOrderLineItemId: lineItems.Id Possível ID do Salesforce para correlacionar retornar do DB com registro do SF
-    
-}]]></ee:set-variable>
 				<ee:set-variable variableName="consultantRequest" ><![CDATA[%dw 2.0
 output application/json
 
@@ -99,7 +64,6 @@ var workOrder = payload.compositeResponse.body[0].records[0]
 var scheduling = payload.compositeResponse.body[1].records[0]
 ---
 {
-    "codigoAgendamento": scheduling.Externald__c,
     "codigoEmpresa": workOrder.Store__r.DealerNetExternalId__c,
     "codigoConsultor": workOrder.Owner.DealerNetCode__c,
     "dataAgendamento": scheduling.StartDate__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
@@ -147,19 +111,84 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 		<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="consultantResponse">
 			<dealernet-sapi:create-register-service-request-data ><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:create-register-service-request-data>
 		</dealernet-sapi:create-register-service>
+		<ee:transform doc:name="Productive appointment Payload sended to Dealernet" doc:id="8151a1fd-3fc3-4c4c-80ea-399491cea289" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="productiveRequest" ><![CDATA[%dw 2.0
+output application/json
+
+var lineItems = payload.compositeResponse.body[3].records default []
+
+var productiveScheduling = payload.compositeResponse.body[2].records[0]
+
+var codResponsavel = productiveScheduling.Seller__r.ExternalId__c splitBy ("_")
+
+---
+lineItems map (lineItem) -> {
+    //"OficinaServico_OSCod": lineItem.WorkOrderId, --> validar com o Andrei, se em algum momento vai ser necessário criar a OS no Dealer
+    "OficinaServico_AgendamentoCod": productiveScheduling.ExternalId__c,
+    "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
+    "OficinaServico_TMOCod": (lineItem.Product2.ExternalId__c splitBy ("_")) [1], //Obrigatório
+    "OficinaServico_Qtde": lineItem.Quantity,
+    "OficinaServico_Horas": lineItem.DurationTime__c,
+    "OficinaServico_ValorUnitario": lineItem.TotalPrice,
+    "OficinaServico_PercDesconto": lineItem.Discount,
+    "OficinaServico_CobrarCliente": lineItem.TmoCharges__c,
+    "OficinaServico_ExecutarOficina": lineItem.TmoExecutes__c,
+    "OficinaServico_UsuarioCodResponsavel": codResponsavel[1], //Mandar sem o produtivo_
+    "OficinaServico_SetorExecucao": "OFC",//lineItem.ExecutionSector__c, //Precisa ser OFC para o caso de Oficina. Precisa pegar o mapping do Dealer.
+    
+    "OficinaServico_DescricaoProblemaSolucao": productiveScheduling.Description default "Teste", //Colocar como Obrigatório
+    "OficinaServico_CustoPrevisto": 0, 
+    "OficinaServico_CustoReal": 0, 
+    "OficinaServico_ServicoRapido": 0,
+    "OficinaServico_SolicitadoCliente": lineItem.CustomerRequest__c, //Está nulo, obrigatório
+    "OficinaServico_StatusAndamento": "ABE",
+    "OficinaServico_StatusDesconto": "PEN",
+    "OficinaServico_StatusExecucao": "PEN",
+    "OficinaServico_ExigeTesteVeiculo": lineItem.TmoRequiresTest__c,
+    
+    //WorkOrderLineItemId: lineItems.Id Possível ID do Salesforce para correlacionar retornar do DB com registro do SF
+    
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
 		<foreach doc:name="Iterate Productive Request " doc:id="06f3c0c1-62d6-4097-b41d-21e18d6fd28e" collection="#[vars.productiveRequest]">
 			<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="productiveResponse">
 			<dealernet-sapi:create-service-order-request-data><![CDATA[#[vars.productiveRequest]]]></dealernet-sapi:create-service-order-request-data>
 		</dealernet-sapi:create-service-order>
-			<ee:transform doc:name="Transform Message" doc:id="795c80b1-0e64-49f5-a959-5bf5b7bc13c8" >
+			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="795c80b1-0e64-49f5-a959-5bf5b7bc13c8" >
 				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
 				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="aggregateProductiveResponses" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.aggregateProductiveResponses ++ [{
+    "workOrderLineItemId": payload.workOrderLineItemId,
+    "dealerKey": vars.productiveResponse.GENERATED_KEYS
+}]]]></ee:set-variable>
+				</ee:variables>
 			</ee:transform>
 		</foreach>
+		<ee:transform doc:name="Build Final Response" doc:id="11009fb7-f40c-4c92-8bb8-de0b2e11bd40" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "consultant": {
+        "workOrderId": vars.workOrderId,
+        "dealerKey": vars.consultantResponse.GENERATED_KEYS
+    },
+    "productives": vars.aggregateProductiveResponses map (item) -> {
+        "workOrderLineItemId": item.workOrderLineItemId,
+        "dealerKey": item.dealerKey
+    }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 	</sub-flow>
 	<sub-flow name="send-proposal-to-dealernet-subflow" doc:id="05d5da8f-be9b-4bfb-9087-f2803ebebf3a" >
 		<ee:transform doc:name="orderId" doc:id="f29fd940-747b-4b57-8523-33963a9a2e7b">
@@ -169,6 +198,10 @@ payload]]></ee:set-payload>
 output application/java
 ---
 payload.id]]></ee:set-variable>
+				<ee:set-variable variableName="aggregateInstallmentResponse" ><![CDATA[%dw 2.0
+output application/java
+---
+[]]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<ee:transform doc:name="Composite Salesforce WorkOrder Get informations" doc:id="d4a4ce70-2d84-48ea-a7e4-ec740b9a449a">
@@ -192,7 +225,7 @@ output application/json
     },
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT ApprovedInstallmentAmount__c, CheckAgency__c, CheckingAccount__c, ConsortiumGroup__c, ConsortiumQuote__c, CreatedDate, Description__c, DueDate__c, FinancingBank__c, InterestAmount__c, LastModifiedDate, NumberInstallmentsApproved__c, Order__c, Order__r.Account.CPFCNPJ__c, PaymentCondition__r.ExternalId__c, PaymentCondition__r.Name, UsedVehicleEvaluation__r.VehiclePlate__c, UsedVehicleEvaluation__r.ExternalId__c FROM Installment__c WHERE Order__r.Id = '" ++ vars.orderId ++ "'",
+      "url": "/services/data/v63.0/query?q=SELECT Id, UniqueNumber__c, ApprovedInstallmentAmount__c, CheckAgency__c, CheckingAccount__c, ConsortiumGroup__c, ConsortiumQuote__c, CreatedDate, Description__c, DueDate__c, FinancingBank__c, InterestAmount__c, LastModifiedDate, NumberInstallmentsApproved__c, Order__c, Order__r.Account.CPFCNPJ__c, PaymentCondition__r.ExternalId__c, PaymentCondition__r.Name, UsedVehicleEvaluation__r.VehiclePlate__c, UsedVehicleEvaluation__r.ExternalId__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM Installment__c WHERE Order__r.Id = '" ++ vars.orderId ++ "'",
       "referenceId": "InstallmentsQuery"
     }
   ]
@@ -211,39 +244,43 @@ output application/json
 output application/json
 var orders = payload.compositeResponse.body[0].records[0]
 var lineItems = payload.compositeResponse.body[1].records[0]
+
+var enviaEmail = if(orders.MainContact__r.ContactPreference__c contains ("Email")) 1 else 0
+
+var enviaSms = if(orders.MainContact__r.ContactPreference__c contains ("Telefone")) 1 else 0
 ---
 {
 	"Proposta_EmpresaCod": orders.Store__r.DealerNetExternalId__c,
 	"Proposta_VeiculoCod": orders.Asset__r__r.ExternalId__c,
 	"Proposta_BancoPedidoCod": orders.campo,
 	"Proposta_Pedido": orders.OrderNumber,
-	"Proposta_Versao": orders.Asset__r.Version__c,
+	"Proposta_Versao": 1,
 	"Proposta_Valor": orders.TotalAmount,
 	"Proposta_DataValidade": orders.EffectiveDate,
-	"Proposta_EnviaEmail": orders.MainContact__r.ContactPreference__c,
-	"Proposta_SMS": orders.MainContact__r.ContactPreference__c,
-	"Proposta_EntregaPesquisaEmail": orders.MainContact__r.ContactPreference__c,
+	"Proposta_EnviaEmail": enviaEmail,
+	"Proposta_SMS": enviaSms,
+	"Proposta_EntregaPesquisaEmail": enviaEmail,
 	"Proposta_Observacao": orders.Description,
 	"Proposta_PercDescontoMax": lineItems.Discount__c,
 	"Atendimento_Codigo": orders.DealerNetServiceCode__c,
 	"Proposta_FamiliaVeiculoCod": orders.Asset__r.Product2.VehicleFamilyCode__c,
 	"Proposta_EstoqueCod": orders.Asset__r.StockCode__c,
 	"Proposta_VeiculoModeloCod": orders.Asset__r.ModelCode__c,
-	"Proposta_DataCriacao": orders.CreatedDate,
-	"Proposta_DataConfirmacao": orders.CreatedDate,
+	"Proposta_DataCriacao": orders.CreatedDate as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	"Proposta_DataConfirmacao": orders.CreatedDate as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
 	"Proposta_PrecoPublico": lineItems.ListPrice,
 	"Proposta_DataValidadePedido": orders.EffectiveDate,
 	"Proposta_VeiculoValor": lineItems.UnitPrice,
-	"Proposta_FinanceiraDes": orders.CreditAnalysis__r.FinancingBank__c,
-	"Proposta_ModeloVeiculoDes": orders.Asset__r.Product2.Name,
-	"Proposta_StatusFinanceira": orders.ExternalIdDealerNet__c,
+	//"Proposta_FinanceiraDes": orders.CreditAnalysis__r.FinancingBank__c,
+	//"Proposta_ModeloVeiculoDes": orders.Asset__r.Product2.Name,
+	//"Proposta_StatusFinanceira": orders.ExternalIdDealerNet__c,
 	
-	"Proposta_Status": "Negociação",
+	"Proposta_Status": "NEG",
 	"Proposta_PercComissao": orders.CommissionPercentage__c,
 	"Proposta_PercComissaoVDVI": orders.CommissionPercentage__c,
-	 "Proposta_AprovacaoCobranca": "FALSE",
+	"Proposta_AprovacaoCobranca": "FALSE",
 	"Proposta_AprovacaoGerente": "TRUE",
-	"Proposta_StatusEntrega": "Preparacao",
+	"Proposta_StatusEntrega": "PRP",
 	"Proposta_LiberacaoExtra": "0",
 	"Proposta_AprovacaoEntrega": "0",
 	"Proposta_IndicadorPresenca": "1",
@@ -253,6 +290,7 @@ output application/json
 var installments = payload.compositeResponse.body[2].records[0]
 ---
 {
+	"codigoParcelaProposta": installments.UniqueNumber__c,
     "codigoProposta": installments.Order__r.ExternalId__c,
     "dataVencimento": installments.DueDate__c,
     "valor": installments.ApprovedInstallmentAmount__c,
@@ -260,9 +298,9 @@ var installments = payload.compositeResponse.body[2].records[0]
     "valorJuros": installments.InterestAmount__c,
     "numeroDocumento": installments.Order.Account.CPFCNPJ__c,
     "codigoUsarioCriacao": installments.Owner.DealerNetCode__c,
-    "dataCriacao": installments.CreatedDate,
-    "codigoUsuarioAlteracao": installments.LastModifiedBy.DealerNetCode__c,
-    "dataAlteracao": installments.LastModifiedDate,
+    "dataCriacao": installments.CreatedDate as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+    "codigoUsuarioAlteracao": installments.Owner.DealerNetCode__c,
+    "dataAlteracao": installments.LastModifiedDate as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
     "codigoTipoParcela": installments.PaymentCondition__r.ExternalId__c,
     "codigoAvaliacaoUsado": installments.UsedVehicleEvaluation__r.ExternalId__c,
     "placaVeiculoUsado": installments.UsedVehicleEvaluation__r.VehiclePlate__c,
@@ -273,9 +311,7 @@ var installments = payload.compositeResponse.body[2].records[0]
     "agenciaCheque": installments.CheckAgency__c,
     "contaCorrenteCheque": installments.CheckingAccount__c, 
     "codigoCondicaoPagamento": installments.PaymentCondition__r.ExternalId__c,
-    "codigoTipoDocumentoTEF": installments.PaymentCondition__r.Name,
     "valorParcelasFinanciamento": installments.ApprovedInstallmentAmount__c,
-    
     "taxaCadastro": 0,
     "parcelaAbater": installments.IsTradeWithChange__c,
     //PropostaParcela_Codigo confirmar com o Daniel
@@ -283,8 +319,90 @@ var installments = payload.compositeResponse.body[2].records[0]
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<dealernet-sapi:send-proposal doc:name="Send Proposal" doc:id="a6adb7b0-691e-4590-af20-7d8fb5271855" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
-		<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
+		<dealernet-sapi:send-proposal doc:name="Send Proposal" doc:id="a6adb7b0-691e-4590-af20-7d8fb5271855" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="proposalResponse">
+			<dealernet-sapi:send-proposal-request-data ><![CDATA[#[vars.proposalRequest]]]></dealernet-sapi:send-proposal-request-data>
+		</dealernet-sapi:send-proposal>
+		<ee:transform doc:name="Installments Payload send to Dealernet" doc:id="6d0a33b4-c920-4203-b3ad-368552fa8deb">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="installmentsRequest"><![CDATA[%dw 2.0
+output application/json
+var installments = payload.compositeResponse.body[2].records
+
+var codigoProposta = vars.proposalResponse.GENERATED_KEYS
+
+---
+ installments map (installment) -> {
+	"codigoParcelaProposta": installment.UniqueNumber__c,
+	"codigoProposta": codigoProposta,
+	"dataVencimento": installment.DueDate__c,
+	"valor": installment.ApprovedInstallmentAmount__c,
+	"observacao": installment.Description__c,
+	"valorJuros": installment.InterestAmount__c,
+	"numeroDocumento": installment.Order.Account.CPFCNPJ__c,
+	"codigoUsarioCriacao": installment.Owner.DealerNetCode__c,
+	"dataCriacao": installment.CreatedDate as DateTime {
+		format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+	} as String {
+		format: "yyyy-MM-dd'T'HH:mm:ss"
+	},
+	"codigoUsuarioAlteracao": installment.Owner.DealerNetCode__c,
+	"dataAlteracao": installment.LastModifiedDate as DateTime {
+		format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+	} as String {
+		format: "yyyy-MM-dd'T'HH:mm:ss"
+	},
+	"codigoTipoParcela": installment.PaymentCondition__r.ExternalId__c,
+	"codigoAvaliacaoUsado": installment.UsedVehicleEvaluation__r.ExternalId__c,
+	"placaVeiculoUsado": installment.UsedVehicleEvaluation__r.VehiclePlate__c,
+	"grupoConsorcio": installment.ConsortiumGroup__c,
+	"cotaConsorcio": installment.ConsortiumQuote__c,
+	"parcelas": installment.NumberinstallmentApproved__c,
+	"codigoBancoCheque": installment.FinancingBank__c,
+	"agenciaCheque": installment.CheckAgency__c,
+	"contaCorrenteCheque": installment.CheckingAccount__c,
+	"valorParcelasFinanciamento": installment.ApprovedInstallmentAmount__c,
+	"taxaCadastro": 0,
+	"parcelaAbater": installment.IsTradeWithChange__c,
+	"installmentId": installment.Id,
+// PropostaParcela_Codigo confirmar com o Daniel
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="52790ba8-aad7-48e8-8c90-7dd211fc7ca4" collection="#[vars.installmentsRequest]">
+			<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="installmentsResponse"/>
+			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="2c763813-dfb5-4d9f-9a08-34a824a92ec7" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="aggregateInstallmentResponses" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.aggregateInstallmentResponse ++ [{
+    "installmentId": payload.installmentId,
+    "dealerKey": vars.installmentsResponse.GENERATED_KEYS
+}]]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<ee:transform doc:name="Build Final Response" doc:id="72c5f172-3d9a-44a1-b94d-c693ca2422c7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "proposal": {
+        "orderId": vars.orderId,
+        "dealerKey": vars.proposalResponse.GENERATED_KEYS
+    },
+    "installments": vars.aggregateInstallmentResponse map (item) -> {
+        "installmentId": item.installmentId,
+        "dealerKey": item.dealerKey
+    }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 	</sub-flow>
 	<sub-flow name="send-backup-car-to-dealernet-subflow" doc:id="038f85a5-6bcd-4bd9-bd48-d8cf5d5d3c37" >
 		<ee:transform doc:name="assetId" doc:id="599184d1-bcba-4fc7-a0d8-00a9ca994c6c">
