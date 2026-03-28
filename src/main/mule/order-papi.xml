@@ -139,7 +139,7 @@ output application/json
         <flow-ref doc:name="send-used-evaluation-to-dealernet-subflow" doc:id="c85dd20e-f824-42a4-abdd-49b19592ba66" name="send-used-evaluation-to-dealernet-subflow" />
     </flow>
     <flow name="post:\appointment:application\json:order-papi-config">
-        <logger level="INFO" message="post:\appointment:application\json:order-papi-config" />
+        <flow-ref doc:name="send-service-appointment-to-dealernet-subflow" doc:id="9e59f101-3d90-4f4d-91c9-7e3bbb905194" name="send-service-appointment-to-dealernet-subflow"/>
     </flow>
     <flow name="post:\backup-car:application\json:order-papi-config">
         <flow-ref doc:name="send-backup-car-to-dealernet-subflow" doc:id="ed3bf3a1-89b2-4194-83b6-582377247e25" name="send-backup-car-to-dealernet-subflow" />

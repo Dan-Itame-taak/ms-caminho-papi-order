@@ -149,14 +149,13 @@ lineItems map (lineItem) -> {
     "OficinaServico_StatusExecucao": "PEN",
     "OficinaServico_ExigeTesteVeiculo": lineItem.TmoRequiresTest__c,
     
-    //WorkOrderLineItemId: lineItems.Id Possível ID do Salesforce para correlacionar retornar do DB com registro do SF
+    workOrderLineItemId: lineItem.Id,
     
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="Iterate Productive Request " doc:id="06f3c0c1-62d6-4097-b41d-21e18d6fd28e" collection="#[vars.productiveRequest]">
 			<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="productiveResponse">
-			<dealernet-sapi:create-service-order-request-data><![CDATA[#[vars.productiveRequest]]]></dealernet-sapi:create-service-order-request-data>
 		</dealernet-sapi:create-service-order>
 			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="795c80b1-0e64-49f5-a959-5bf5b7bc13c8" >
 				<ee:message >
@@ -442,20 +441,39 @@ output application/json
 output application/json
 
 var asset = payload.compositeResponse.body[0].records[0]
+
+var statusToCode = {
+  "Reservado": "AUT",
+  "Comprado": "AUT",
+  "Disponível": "CAN"
+}
 ---
 {
-    "VeiculoReserva_Codigo": asset.BookingCode__c,
-    "VeiculoReserva_BancoPedidoCod": asset.Opportunity__r.RecordType.Name,
+    //"VeiculoReserva_Codigo": asset.BookingCode__c,
+    //"VeiculoReserva_BancoPedidoCod": asset.Opportunity__r.RecordType.Name,
     "VeiculoReserva_ValorEntrada": asset.Price,
-    "VeiculoReserva_DataInicial": asset.ReservationDateTime__c,
-    "VeiculoReserva_DataFinal": asset.ReservationExpirationDateTime__c,
-    "VeiculoReserva_Status": asset.Status,
+    "VeiculoReserva_DataInicial": asset.ReservationDateTime__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+    "VeiculoReserva_DataFinal": asset.ReservationExpirationDateTime__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+    "VeiculoReserva_Status": statusToCode[asset.Status] default null,
     "VeiculoReserva_VeiculoCod": asset.ExternalId__c,
-    "Atendimento_Codig": asset.Opportunity.DealerNetServiceCode__c,
+    "Atendimento_Codigo": asset.Opportunity__r.DealerNetServiceCode__c,
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<dealernet-sapi:send-back-up-car doc:name="Send Back-up car" doc:id="5fcb3654-219c-4a50-baff-4379f39ffd0e" config-ref="Dealernet_sapi_Config"/>
+		<dealernet-sapi:send-car-reservation doc:name="Send Car Reservation" doc:id="cd9c8e39-b949-41cd-aae4-dd17c518fb6d" config-ref="Dealernet_sapi_Config" target="backupCarResponse" client-id="123" client-secret="123"/>
+		<ee:transform doc:name="Build Final Response" doc:id="7fd57415-3ba2-4675-9f4b-26ada59f40cf" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "backup-car": {
+        "assetId": vars.assetId,
+        "dealerKey": vars.backupCarResponse.GENERATED_KEYS
+    }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 	</sub-flow>
 	<sub-flow name="send-used-evaluation-to-dealernet-subflow" doc:id="fb7d9512-1ecf-42e6-b2b7-4b949dff5d0c" >
 		<ee:transform doc:name="assesmentId" doc:id="9aa50517-1bd4-40e0-b3ff-8eb962bf6a4f" >
@@ -479,7 +497,7 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT CaminhoPrice__c, FipeValue__c, InformedValue__c, LastAutoAvaliarSync__c, ModelId__c, ModelYear__c, Name, PriceObservation__c, Renavam__c, Status__c, Store__r.ExternalId__c, ValuationGoal__c, ValuationObs__c, ValuationValue__c, VehicleColorId__c, VehicleMileage__c, VehiclePlate__c, VehicleVIN__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM AssessmentUsed__c WHERE Id = '" ++ vars.assesmentId ++ "'",
+      "url": "/services/data/v63.0/query?q=SELECT YearCode__c, EvaluationPreference__c, EvaluationValidityDays__c, CaminhoPrice__c, FipeValue__c, InformedValue__c, LastAutoAvaliarSync__c, ModelId__c, ModelYear__c, Name, PriceObservation__c, Renavam__c, Status__c, Store__r.ExternalId__c, Store__r.DealerNetExternalId__c, ValuationGoal__c, ValuationObs__c, ValuationValue__c, VehicleColorId__c, VehicleMileage__c, VehiclePlate__c, VehicleVIN__c, Expenses__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM AssessmentUsed__c WHERE Id = '" ++ vars.assesmentId ++ "'",
       "referenceId": "AssessmentUsedQuery"
     },
     {
@@ -505,19 +523,18 @@ var asset = payload.compositeResponse.body[0].records[0]
 var installment = payload.compositeResponse.body[1].records[0]
 ---
 {
-	"AvaliacaoUsado_EmpresaCod": asset.Store__r.ExternalId__c,
+	"AvaliacaoUsado_EmpresaCod": asset.Store__r.DealerNetExternalId__c,
 	"AvaliacaoUsado_Placa": asset.VehiclePlate__c,
-	"AvaliacaoUsado_ModeloVeiculoCod": asset.ModelId__c,
 	"AvaliacaoUsado_Kilometragem": asset.VehicleMileage__c,
 	"AvaliacaoUsado_CorCod_Externa": asset.VehicleColorId__c,
-	"AvaliacaoUsado_MotAvaliacaoCod": asset.PriceObservation__c,
+	"AvaliacaoUsado_MotAvaliacaoCod": "1",
 	"AvaliacaoUsado_Observacao": asset.ValuationObs__c,
 	"AvaliacaoUsado_PrecoCliente": asset.InformedValue__c,
 	"AvaliacaoUsado_PrecoAvaliacao": asset.ValuationValue__c,
 	"AvaliacaoUsado_ValorTOP": asset.FipeValue__c,
 	"AvaliacaoUsado_ValorSugeridoVenda": asset.CaminhoPrice__c,
-	"AvaliacaoUsado_Status": asset.Status__c,
-	"AvaliacaoUsado_VeiculoAnoCod": asset.ModelYear__c,
+	"AvaliacaoUsado_Status": "AUT", //asset.Status__c,
+	"AvaliacaoUsado_VeiculoAnoCod": asset.YearCode__c,
 	"AvaliacaoUsado_Chassi": asset.VehicleVIN__c,
 	"AvaliacaoUsado_NroRenavam": asset.Renavam__c,
 	"Atendimento_Codigo": installment.Quote__r.Opportunity.DealerNetServiceCode__c,
@@ -531,23 +548,45 @@ var installment = payload.compositeResponse.body[1].records[0]
 	"AvaliacaoUsado_ValorTabela": asset.FipeValue__c,
 	"AvaliacaoUsado_SugeridoCompra": asset.ValuationValue__c,
 	"AvaliacaoUsado_SugeridoVenda": asset.CaminhoPrice__c,
+	"AvaliacaoUsado_PrevisaoVenda": "99",
+	"AvaliacaoUsado_PrevisaoRecebe": "99",
+	"AvaliacaoUsado_PrevisaoReparo": asset.Expenses__c,
+	"AvaliacaoUsado_DiasValidade": asset.EvaluationValidityDays__c,
+	"AvaliacaoUsado_Preferencia": asset.EvaluationPreference__c [0] default "N",
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123"/>
+		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="usedEvaluationResponse"/>
+		<ee:transform doc:name="Build Final Response" doc:id="c8f020da-e641-4219-bc3b-82be1f296d34" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "used-evaluation": {
+        "assesmentId": vars.assesmentId,
+        "dealerKey": vars.usedEvaluationResponse.GENERATED_KEYS
+    }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 	</sub-flow>
 	<sub-flow name="send-service-appointment-to-dealernet-subflow" doc:id="b6f17ce8-9ba8-4772-b330-d816105be679" >
 		<ee:transform doc:name="opportunityId" doc:id="975e6c74-4d95-4274-80e1-a24b943f3a30" >
 			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="opportunityId" ><![CDATA[%dw 2.0
 output application/java
 ---
-payload.id]]></ee:set-payload>
-			</ee:message>
+payload.id]]></ee:set-variable>
+			</ee:variables>
 		</ee:transform>
 		<ee:transform doc:name="compositeRequest" doc:id="0a0b7079-895b-42bb-ad71-6d94c3b92c91" >
 			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -555,13 +594,13 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT Store__r.DealerNetExternalId__c, CreatedDate, Description, DealerNetServiceCode__c, Asset__r.Plate__c, Asset__r.ExternalId__c, MainContact__r.Name, MainContact__r.Phone, MainContact__r.MobilePhone, MainContact__r.Email, Account.CPFCNPJ__c, Account.ClearedCPFCNPJ__c, Account.DealerNetExternalId__c, Owner.Name, Owner.DealerNetCode__c, Owner.Id, Opportunity.LeadSource, Opportunity.RecordType.Name, Opportunity.Id FROM Order WHERE Id = '" ++ vars.orderId ++ "'",
-      "referenceId": "OrderQuery"
+      "url": "/services/data/v63.0/query?q=SELECT Id, Name, CloseDate, LeadSource, LossReason__c, Description, RecordType.Name, Owner.DealerNetCode__c, Account.ExternalId__c, Asset__r.ModelCode__c, CreatedDate, Store__r.DealerNetExternalId__c FROM Opportunity WHERE Id = '" ++ vars.opportunityId ++ "'",
+      "referenceId": "OpportunityQuery"
     }
   ]
 }
-]]></ee:set-payload>
-			</ee:message>
+]]></ee:set-variable>
+			</ee:variables>
 		</ee:transform>
 		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="8075bd26-8878-49c3-a27c-5dcca52451ba" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123">
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
@@ -572,33 +611,75 @@ output application/json
 			<ee:variables >
 				<ee:set-variable variableName="serviceAppointmentRequest" ><![CDATA[%dw 2.0
 output application/json
-var order = payload.compositeResponse.body[0].records[0]
+var opportunity = payload.compositeResponse.body[0].records[0]
+
+var leadSourceToIntermediate = {
+    "Montadoras": "LEAD MONTADORA",
+    "WebMotors": "PORTAL INTERNET",
+    "Site Concessionária": "PORTAL INTERNET",
+    "META": "PORTAL INTERNET",
+    "Compre Car": "PORTAL INTERNET",
+    "Carro São Paulo": "PORTAL INTERNET",
+    "Caminhões e Carretas": "PORTAL INTERNET",
+    "Mídia Off": "PORTAL INTERNET",
+    "WhatsApp": "TELEFÔNICO RECEPTIVO",
+    "TikTok": "PORTAL INTERNET",
+    "LinkedIn": "PORTAL INTERNET",
+    "Email Mkt / NewsLetters": "PORTAL INTERNET",
+    "OLX": "PORTAL INTERNET",
+    "Mercado Livre": "PORTAL INTERNET",
+    "Landing Page": "PORTAL INTERNET",
+    "Recall Ativo": "TELEFÔNICO ATIVO",
+    "Passagem Loja": "PRESENCIAL / LOJA"
+}
+var intermediateToCode = {
+    "TELEFÔNICO ATIVO": "TAT",
+    "PRESENCIAL / LOJA": "BAL",
+    "E-MAIL": "EMA",
+    "TELEFÔNICO RECEPTIVO": "TRC",
+    "VISITA EXTERNA": "PRO",
+    "FEIRÃO EXTERNO": "OUT",
+    "PASSAGEM NA LOJA - INDICAÇÃO": "BAL",
+    "PORTAL INTERNET": "EMA",
+    "E-MAIL RECEPTIVO": "EMA",
+    "VISITA AO CLIENTE": "VIS",
+    "CONTATO POR TELEFONE": "TAT",
+    "NÃO PRESENCIAL / INTERESTADUAL": "TAT",
+    "LEAD MONTADORA": "MRE",
+    "D-CHECK": "ALT"
+}
 ---
 {
-    "Empresa": order.Store__r.DealerNetExternalId__c,
-    "Nome": order.MainContact__r.Name,
-    "DDD1": (order.MainContact__r.Phone default "")[0 to 1],
-    "Telefone1": (order.MainContact__r.Phone default "")[2 to -1],
-    "DDD2": (order.MainContact__r.MobilePhone default "")[0 to 1],
-    "Telefone2": (order.MainContact__r.MobilePhone default "")[2 to -1],
-    "PlacaVeiculo": order.Asset__r.Plate__c,
-    "VeiculoCodigo": order.Asset__r.ExternalId__c,
-    "DataHora": order.CreatedDate,
-    "Descricao": order.Description,
-    "Email": order.MainContact__r.Email,
-    "CNPJ": order.Account.CPFCNPJ__c,
-    "Usuario_Nome": order.Owner.Name,
-    "Usuario_Codigo": order.Owner.DealerNetCode__c,
-    "Usuario_Identificador": order.Owner.Id,
-    "Midia_Descricao": order.Opportunity.LeadSource,
-    "NaturezaAtendimento_Descricao": order.Opportunity.RecordType.Name,
-    "Atendimento_Codigo": order.DealerNetServiceCode__c,
-    "Documento": order.Account.ClearedCPFCNPJ__c,
-    "Pessoa_Codigo": order.Account.DealerNetExternalId__c,
-    "Assunto": order.Description,
-    "IdLeadExterno": order.Opportunity.Id
+    "Atendimento_EmpresaCod": opportunity.Store__r.DealerNetExternalId__c,
+    "Atendimento_PessoaCod": opportunity.Account.ExternalId__c,
+    "Atendimento_Status": "ABE",
+    "Atendimento_UsuarioCod": opportunity.Owner.DealerNetCode__c,
+    // "NaturezaAtendimento_Codigo": opportunity.
+    "Atendimento_DataVendaDeclarada": opportunity.CloseDate,
+    "Atendimento_MeioContato": intermediateToCode[leadSourceToIntermediate[opportunity.LeadSource] default ""] default null,
+    "Atendimento_ModeloVeiculoCod": opportunity.Asset__r.ModelCode__c,
+    "Atendimento_DataVendaPerdida": opportunity.CloseDate,
+    "Atendimento_VeiculoCod": opportunity.Asset__r.ModelCode__c,
+    "Atendimento_AvaliacaoVendedor": opportunity.Description,
+    "Atendimento_MotVendaPerdidaCod": opportunity.LossReason__c,
 }]]></ee:set-variable>
 			</ee:variables>
+		</ee:transform>
+		<dealernet-sapi:register-appointment doc:name="Register Appointment" doc:id="82705975-6851-44f7-9d02-ae2028ac9f44" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="serviceAppointmentResponse">
+			<dealernet-sapi:register-appointment-request-data ><![CDATA[#[vars.serviceAppointmentRequest]]]></dealernet-sapi:register-appointment-request-data>
+		</dealernet-sapi:register-appointment>
+		<ee:transform doc:name="Build Final Response" doc:id="9c154f23-8e5c-40e2-9c61-eb4f78d3f924" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "service-appointment": {
+        "opportunityId": vars.opportunityId,
+        "dealerKey": vars.serviceAppointmentResponse.GENERATED_KEYS
+    }
+}]]></ee:set-payload>
+			</ee:message>
 		</ee:transform>
 	</sub-flow>
 </mule>
