@@ -9,9 +9,6 @@ if (!isBlank(payload.nomeConsultor)){
     Seller__r: {
         ExternalId__c: "consultor_" ++ (payload.codigoConsultor as String)
     },
-    WorkOrder__r: {
-    	ExternalId: payload.codigoOs
-    },
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String ,
     RecordTypeId: vars.rTypeCons
@@ -24,9 +21,6 @@ else
     ExternalId__c: (payload.codigoAgendamento as String) ++ "_" ++ (payload.codigoProdutivo as String),
     Seller__r: {
         ExternalId__c: "produtivo_" ++ (payload.codigoProdutivo as String)
-    },
-    WorkOrder__r: {
-    	ExternalId: payload.codigoOs
     },
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String,
