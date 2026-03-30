@@ -108,7 +108,7 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="consultantResponse">
+		<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse">
 			<dealernet-sapi:create-register-service-request-data ><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:create-register-service-request-data>
 		</dealernet-sapi:create-register-service>
 		<ee:transform doc:name="Productive appointment Payload sended to Dealernet" doc:id="8151a1fd-3fc3-4c4c-80ea-399491cea289" >
@@ -155,7 +155,7 @@ lineItems map (lineItem) -> {
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="Iterate Productive Request " doc:id="06f3c0c1-62d6-4097-b41d-21e18d6fd28e" collection="#[vars.productiveRequest]">
-			<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="productiveResponse">
+			<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveResponse">
 		</dealernet-sapi:create-service-order>
 			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="795c80b1-0e64-49f5-a959-5bf5b7bc13c8" >
 				<ee:message >
@@ -232,7 +232,7 @@ output application/json
 ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="90dbbc0a-3f4a-4b96-a0f1-0e05f56c2403" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123">
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="90dbbc0a-3f4a-4b96-a0f1-0e05f56c2403" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="d2c057d7-f417-46a1-b508-759664fb82d2" >
@@ -318,7 +318,7 @@ var installments = payload.compositeResponse.body[2].records[0]
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<dealernet-sapi:send-proposal doc:name="Send Proposal" doc:id="a6adb7b0-691e-4590-af20-7d8fb5271855" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="proposalResponse">
+		<dealernet-sapi:send-proposal doc:name="Send Proposal" doc:id="a6adb7b0-691e-4590-af20-7d8fb5271855" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="proposalResponse">
 			<dealernet-sapi:send-proposal-request-data ><![CDATA[#[vars.proposalRequest]]]></dealernet-sapi:send-proposal-request-data>
 		</dealernet-sapi:send-proposal>
 		<ee:transform doc:name="Installments Payload send to Dealernet" doc:id="6d0a33b4-c920-4203-b3ad-368552fa8deb">
@@ -370,17 +370,17 @@ var codigoProposta = vars.proposalResponse.GENERATED_KEYS
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="For Each" doc:id="52790ba8-aad7-48e8-8c90-7dd211fc7ca4" collection="#[vars.installmentsRequest]">
-			<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="installmentsResponse"/>
+			<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="installmentsResponse"/>
 			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="2c763813-dfb5-4d9f-9a08-34a824a92ec7" >
 				<ee:message >
 				</ee:message>
 				<ee:variables >
-					<ee:set-variable variableName="aggregateInstallmentResponses" ><![CDATA[%dw 2.0
+					<ee:set-variable variableName="aggregateInstallmentResponse" ><![CDATA[%dw 2.0
 output application/java
 ---
 vars.aggregateInstallmentResponse ++ [{
     "installmentId": payload.installmentId,
-    "dealerKey": vars.installmentsResponse.GENERATED_KEYS
+    "dealerKey": payload.codigoParcelaProposta
 }]]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
@@ -432,7 +432,7 @@ output application/json
 ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="85fac94f-cc46-4318-962f-8366910b48fb" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123" >
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="85fac94f-cc46-4318-962f-8366910b48fb" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" >
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="e37121c4-10ce-48c3-9682-9ce457450feb" >
@@ -460,7 +460,7 @@ var statusToCode = {
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<dealernet-sapi:send-car-reservation doc:name="Send Car Reservation" doc:id="cd9c8e39-b949-41cd-aae4-dd17c518fb6d" config-ref="Dealernet_sapi_Config" target="backupCarResponse" client-id="123" client-secret="123"/>
+		<dealernet-sapi:send-car-reservation doc:name="Send Car Reservation" doc:id="cd9c8e39-b949-41cd-aae4-dd17c518fb6d" config-ref="Dealernet_sapi_Config" target="backupCarResponse" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
 		<ee:transform doc:name="Build Final Response" doc:id="7fd57415-3ba2-4675-9f4b-26ada59f40cf" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -510,7 +510,7 @@ output application/json
 ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="16f6cff2-7f62-4607-96dd-c120c62e26a2" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123" >
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="16f6cff2-7f62-4607-96dd-c120c62e26a2" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" >
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="19d5f87c-2c97-4b75-be32-f20ac3d28484" >
@@ -556,7 +556,7 @@ var installment = payload.compositeResponse.body[1].records[0]
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="usedEvaluationResponse"/>
+		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="usedEvaluationResponse"/>
 		<ee:transform doc:name="Build Final Response" doc:id="c8f020da-e641-4219-bc3b-82be1f296d34" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -602,7 +602,7 @@ output application/json
 ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="8075bd26-8878-49c3-a27c-5dcca52451ba" config-ref="Salesforce_sapi_Config" client-id="123" client-secret="123">
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="8075bd26-8878-49c3-a27c-5dcca52451ba" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 		<ee:transform doc:name="Service Appointment Request" doc:id="bbb956e1-2687-4e93-af72-24ef979b2e12" >
@@ -660,12 +660,12 @@ var intermediateToCode = {
     "Atendimento_ModeloVeiculoCod": opportunity.Asset__r.ModelCode__c,
     "Atendimento_DataVendaPerdida": opportunity.CloseDate,
     "Atendimento_VeiculoCod": opportunity.Asset__r.ModelCode__c,
-    "Atendimento_AvaliacaoVendedor": opportunity.Description,
+    //"Atendimento_AvaliacaoVendedor": opportunity.Description,
     "Atendimento_MotVendaPerdidaCod": opportunity.LossReason__c,
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<dealernet-sapi:register-appointment doc:name="Register Appointment" doc:id="82705975-6851-44f7-9d02-ae2028ac9f44" config-ref="Dealernet_sapi_Config" client-id="123" client-secret="123" target="serviceAppointmentResponse">
+		<dealernet-sapi:register-appointment doc:name="Register Appointment" doc:id="82705975-6851-44f7-9d02-ae2028ac9f44" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="serviceAppointmentResponse">
 			<dealernet-sapi:register-appointment-request-data ><![CDATA[#[vars.serviceAppointmentRequest]]]></dealernet-sapi:register-appointment-request-data>
 		</dealernet-sapi:register-appointment>
 		<ee:transform doc:name="Build Final Response" doc:id="9c154f23-8e5c-40e2-9c61-eb4f78d3f924" >
