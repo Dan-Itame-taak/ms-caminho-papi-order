@@ -44,6 +44,7 @@ output application/java
 			</ee:variables>
 		</ee:transform>
 		<salesforce-sapi:get-service-order-status doc:name="Get service order status" doc:id="083f3185-ff1a-4fc9-bf6b-763bd6feaf46" config-ref="Salesforce_sapi_Config" id="#[vars.workOrderId]"/>
+		<logger level="INFO" doc:name="Logger Before Map Register Service" doc:id="57b0c200-7ac6-4b5d-bebe-1bf3d94d06ca" message="Integration: send-register-service-to-dealernet | correlationId: #[correlationId] | payload: #[payload]" />
 		<ee:transform doc:name="Payload send to Dealernet" doc:id="40d2920d-d518-41f5-82ed-295952b9ea44" >
 			<ee:message >
 			</ee:message>
@@ -65,13 +66,13 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 ---
 {
     "codigoEmpresa": workOrder.Store__r.DealerNetExternalId__c,
-    "codigoConsultor": workOrder.Owner.DealerNetCode__c,
+    "codigoConsultor": workOrder.Seller__r.ExternalId__c, //workOrder.Owner.DealerNetCode__c,
     "dataAgendamento": scheduling.StartDate__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
-    "placa": workOrder.Asset.Plate__c,
-    "codigoModeloVeiculo": workOrder.Asset.ModelCode__c,  
+    "placa": workOrder.Asset__r.Plate__c,
+    "codigoModeloVeiculo": workOrder.Asset__r.ModelCode__c,  
     //"codigoProspect": workOrder.Store__r.DealerNetExternalId__c,
     "codigoCliente": workOrder.Account.DealerNetExternalId__c,
-//    "codigoVeiculo": workOrder.Store__r.DealerNetExternalId__c,
+    "codigoVeiculo": workOrder.Asset__r.ExternalId__c,
 //    "horarioChegada": workOrder.Store__r.DealerNetExternalId__c,
     "observacao": workOrder.Description,
     "tipo": if(workOrder.Type__c == "Ativo") 1 else 0,
@@ -87,12 +88,12 @@ var scheduling = payload.compositeResponse.body[1].records[0]
     "clienteDesejaTransporte": workOrder.CustomerNeedsTransport__c,
     "clienteServicoValet": workOrder.ValetService__c,
     "servicoExpresso": workOrder.ExpressService__c,
-    "veiculoAno": workOrder.Asset.YearOfManufacture__c,
+    "veiculoAno": workOrder.Asset__r.YearOfManufacture__c,
     //"codigoGrupoAgendamento": workOrder.Store__r.DealerNetExternalId__c,
     "codigoTipoServico": workOrder.WorkOrderType__r.ExternalId__c,
 //    "mobilidade": workOrder.Store__r.DealerNetExternalId__c,
 //    "dataPreOrdem": workOrder.Store__r.DealerNetExternalId__c,
-    "chassiVeiculo": workOrder.Asset.Chassis__c,
+    "chassiVeiculo": workOrder.Asset__r.Chassis__c,
 //    "dataPedidoPecasEspeciais": workOrder.Store__r.DealerNetExternalId__c,
 //    "dataPecasRecebidas": workOrder.Store__r.DealerNetExternalId__c,
 //    "rebocado": workOrder.Store__r.DealerNetExternalId__c,
@@ -108,6 +109,7 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<logger level="INFO" doc:name="Logger After Map Register Service" doc:id="ddbd6f1e-00d3-4bb7-bf92-dcc6918d83e9" message="Integration: send-register-service-to-dealernet | correlationId: #[correlationId] | payload: #[vars.consultantRequest]"/>
 		<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse">
 			<dealernet-sapi:create-register-service-request-data ><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:create-register-service-request-data>
 		</dealernet-sapi:create-register-service>
@@ -235,6 +237,7 @@ output application/json
 		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="90dbbc0a-3f4a-4b96-a0f1-0e05f56c2403" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
+		<logger level="INFO" doc:name="Logger Before Map" doc:id="8f18cfc8-79fc-445f-b4f6-ed2e668c8d1b" message="Integration: send-proposal-to-dealernet | correlationId: #[correlationId] | payload: #[payload]" />
 		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="d2c057d7-f417-46a1-b508-759664fb82d2" >
 			<ee:message >
 			</ee:message>
@@ -250,7 +253,7 @@ var enviaSms = if(orders.MainContact__r.ContactPreference__c contains ("Telefone
 ---
 {
 	"Proposta_EmpresaCod": orders.Store__r.DealerNetExternalId__c,
-	"Proposta_VeiculoCod": orders.Asset__r__r.ExternalId__c,
+	"Proposta_VeiculoCod": orders.Asset__r.ExternalId__c,
 	"Proposta_BancoPedidoCod": orders.campo,
 	"Proposta_Pedido": orders.OrderNumber,
 	"Proposta_Versao": 1,
@@ -318,6 +321,7 @@ var installments = payload.compositeResponse.body[2].records[0]
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<logger level="INFO" doc:name="Logger After Map" doc:id="5120ae4f-589d-4318-b700-78b85bdc41a6" message="Integration: send-proposal-to-dealernet | correlationId: #[correlationId] | payload: #[vars.proposalRequest]" />
 		<dealernet-sapi:send-proposal doc:name="Send Proposal" doc:id="a6adb7b0-691e-4590-af20-7d8fb5271855" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="proposalResponse">
 			<dealernet-sapi:send-proposal-request-data ><![CDATA[#[vars.proposalRequest]]]></dealernet-sapi:send-proposal-request-data>
 		</dealernet-sapi:send-proposal>
@@ -370,6 +374,7 @@ var codigoProposta = vars.proposalResponse.GENERATED_KEYS
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="For Each" doc:id="52790ba8-aad7-48e8-8c90-7dd211fc7ca4" collection="#[vars.installmentsRequest]">
+			<logger level="INFO" doc:name="Logger" doc:id="18fb1043-6600-4ad1-9d20-031a383c6667" message="Integration: send-proposal-installments-to-dealernet | correlationId: #[correlationId] | payload: #[vars.installmentsRequest]" />
 			<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="installmentsResponse"/>
 			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="2c763813-dfb5-4d9f-9a08-34a824a92ec7" >
 				<ee:message >
@@ -435,7 +440,8 @@ output application/json
 		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="85fac94f-cc46-4318-962f-8366910b48fb" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" >
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
-		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="e37121c4-10ce-48c3-9682-9ce457450feb" >
+		<logger level="INFO" doc:name="Logger Before Map" doc:id="73734495-1712-4764-98cb-2436a7753118" message="Integration: send-vehicles-reservation | correlationId: #[correlationId] | payload: #[payload]" />
+		<ee:transform doc:name="Vehicle Reservation Payload send to Dealernet" doc:id="e37121c4-10ce-48c3-9682-9ce457450feb" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -460,6 +466,7 @@ var statusToCode = {
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<logger level="INFO" doc:name="Logger After Map" doc:id="3a973187-211e-447f-b6cf-4f90604ee422" message="Integration: send-vehicles-reservation | correlationId: #[correlationId] | payload: #[payload]" />
 		<dealernet-sapi:send-car-reservation doc:name="Send Car Reservation" doc:id="cd9c8e39-b949-41cd-aae4-dd17c518fb6d" config-ref="Dealernet_sapi_Config" target="backupCarResponse" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
 		<ee:transform doc:name="Build Final Response" doc:id="7fd57415-3ba2-4675-9f4b-26ada59f40cf" >
 			<ee:message >
@@ -513,7 +520,8 @@ output application/json
 		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="16f6cff2-7f62-4607-96dd-c120c62e26a2" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" >
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
-		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="19d5f87c-2c97-4b75-be32-f20ac3d28484" >
+		<logger level="INFO" doc:name="Logger Before Map" doc:id="5ac73caf-6a1d-482c-8097-2802398108e9" message="Integration: send-used-evaluation | correlationId: #[correlationId] | payload: #[payload]" />
+		<ee:transform doc:name="Used Evaluation Payload send to Dealernet" doc:id="19d5f87c-2c97-4b75-be32-f20ac3d28484" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -556,6 +564,7 @@ var installment = payload.compositeResponse.body[1].records[0]
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<logger level="INFO" doc:name="Logger After Map" doc:id="fba24ba7-fd86-4f07-b7cc-ef5829a2146b" message="Integration: send-used-evaluation | correlationId: #[correlationId] | payload: #[payload]" />
 		<dealernet-sapi:send-used-evaluation doc:name="Send Used Evaluation" doc:id="7708602e-b283-4cb0-aa03-428576e3d3de" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="usedEvaluationResponse"/>
 		<ee:transform doc:name="Build Final Response" doc:id="c8f020da-e641-4219-bc3b-82be1f296d34" >
 			<ee:message >
@@ -665,6 +674,7 @@ var intermediateToCode = {
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="35035be8-fca1-4bdf-b6d6-abe336491e84" message="Integration: send-appointment-to-dealernet | correlationId: #[correlationId] | payload: #[vars.serviceAppointmentRequest]"/>
 		<dealernet-sapi:register-appointment doc:name="Register Appointment" doc:id="82705975-6851-44f7-9d02-ae2028ac9f44" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="serviceAppointmentResponse">
 			<dealernet-sapi:register-appointment-request-data ><![CDATA[#[vars.serviceAppointmentRequest]]]></dealernet-sapi:register-appointment-request-data>
 		</dealernet-sapi:register-appointment>

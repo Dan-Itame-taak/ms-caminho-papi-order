@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:fandi-sapi="http://www.mulesoft.org/schema/mule/fandi-sapi" xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd
+http://www.mulesoft.org/schema/mule/fandi-sapi http://www.mulesoft.org/schema/mule/fandi-sapi/current/mule-fandi-sapi.xsd">
 	<flow name="send-payment-method-to-salesforce" doc:id="02c7e3e4-14ed-4ed6-b1f1-2440c010f420" >
 		<scheduler doc:name="Scheduler" doc:id="9407c972-4115-4158-8b25-b6ad65ca4e04" >
 			<scheduling-strategy >
@@ -22,6 +23,42 @@ http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/sche
 		<logger level="INFO" doc:name="Logger After Map Payload" doc:id="cc6fbbe6-3fd8-40d4-b7d0-e32b7bf9bbac" message="ntegration: payment-methods | Checkpoint: After Mapping / Before Request to SF  | correlationId: #[correlationId] | payload: #[payload]"/>
 		<salesforce-sapi:create-payment-method doc:name="Create payment method" doc:id="d2d6aa3c-c25f-4eb6-ae3b-a76053d5cbf4" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
 		<logger level="INFO" doc:name="Logger End Payment Method Flow" doc:id="9ca3a1f7-0a42-45df-b566-e8a5fee7d889" message="ntegration: payment-methods | Checkpoint: End   | correlationId: #[correlationId] | payload: #[payload]"/>
+		<error-handler ref="globalError_Router" />
+	</flow>
+	<flow name="send-simulations-updates" doc:id="7762875f-1a4f-4a36-ba4e-6d611154fa13" initialState="stopped">
+		<scheduler doc:name="Scheduler" doc:id="a4bd4327-56b7-483c-ad4a-6809e720bdd8" >
+			<scheduling-strategy >
+				<fixed-frequency startDelay="1" timeUnit="DAYS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<salesforce-sapi:get-creditanalysis doc:name="Get Clients Informations - Salesforce" doc:id="54fe5b12-64d9-4c8a-a845-5922048ed014" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+		<logger level="INFO" doc:name="Logger After Get Client Informations" doc:id="c6a7c6f0-d6ea-4f43-b1c0-74201ef84c6d" message="ntegration: send-credit-analysis-to-salesforce  | correlationId: #[correlationId] | payload: #[payload]"/>
+		<foreach doc:name="For Each" doc:id="6112f991-ac06-43ab-9e50-2f875046a6ca" >
+			<ee:transform doc:name="Set Variables to Query Credit Analysis" doc:id="6672e4b0-5936-4428-a4b2-84fffcffdd5a">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<fandi-sapi:get-credit-analysis-status doc:name="Get Credit Analysis Status" doc:id="4ad330ea-3876-449f-9434-f71526b90c03" cpf-cnpj="#[payload.cpf]" tipo-data="C" data-inicial="#[payload.dataInicial]" client-id="${secure::fandi-sapi.client_id}" client-secret="${secure::fandi-sapi.client_secret}" config-ref="Fandi_sapi_Config"/>
+			<ee:transform doc:name="Map Fandi Return" doc:id="e059701b-5c04-4fee-af7a-0311a4670bd1" >
+				<ee:message>
+							<ee:set-payload resource="dwl/map-credit-analysis-from-fandi.dwl" />
+				</ee:message>
+			</ee:transform>
+			<!-- [STUDIO:"Send Credit Analysis Status"]<salesforce-sapi:send-credit-analysis-status doc:name="Send Credit Analysis Status" doc:id="15791430-7009-482d-a724-918b2b4be6d7" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/> [STUDIO] -->
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="55913f07-6a31-4833-a463-c4b9888711d2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 		<error-handler ref="globalError_Router" />
 	</flow>
 </mule>

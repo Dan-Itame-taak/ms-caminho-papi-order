@@ -11,3 +11,8 @@ dealernet-sapi:
   port: "443"
   timeout: "30000"
   basePath: "/api"
+  
+fandi-sapi:
+  host: "caminho-fandi-sapi-qa-e7hhs6.f12twh.usa-e2.cloudhub.io"
+  port: "443"
+  timeout: "50000"
