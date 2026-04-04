@@ -1,7 +1,7 @@
 %dw 2.0
 output application/json
 ---
-{
+vars.arrayAnalysis ++ [{
 	attributes: {
 		"type": "CreditAnalysis__c"
 	},
@@ -10,4 +10,4 @@ output application/json
     InstallmentQuantity__c: payload.OperacaoParceiro.QtdParcelas,
     FinancingBank__c: payload.OperacaoParceiro.FinanceiraNome,
     Status__c: payload.OperacaoParceiro.OperacaoSituacao
-}
+}]
