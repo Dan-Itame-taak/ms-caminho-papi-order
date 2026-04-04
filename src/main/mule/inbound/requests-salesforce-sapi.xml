@@ -58,6 +58,8 @@ output application/json
 ---
 payload.compositeResponse.body.records[1]]]></ee:set-variable>
 				<ee:set-variable variableName="consultantRequest" ><![CDATA[%dw 2.0
+import * from Modules::orderFunctions
+
 output application/json
 
 var workOrder = payload.compositeResponse.body[0].records[0]
@@ -66,16 +68,16 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 ---
 {
     "codigoEmpresa": workOrder.Store__r.DealerNetExternalId__c,
-    "codigoConsultor": workOrder.Seller__r.ExternalId__c, //workOrder.Owner.DealerNetCode__c,
-    "dataAgendamento": scheduling.StartDate__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
-    "placa": workOrder.Asset__r.Plate__c,
-    "codigoModeloVeiculo": workOrder.Asset__r.ModelCode__c,  
+    "codigoConsultor": (scheduling.Seller__r.ExternalId__c splitBy("_"))[1], //workOrder.Owner.DealerNetCode__c,
+    "dataAgendamento": (scheduling.StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
+    "placa": workOrder.Asset.Plate__c,
+    "codigoModeloVeiculo": workOrder.Asset.ModelCode__c,  
     //"codigoProspect": workOrder.Store__r.DealerNetExternalId__c,
-    "codigoCliente": workOrder.Account.DealerNetExternalId__c,
-    "codigoVeiculo": workOrder.Asset__r.ExternalId__c,
+    "codigoCliente": workOrder.Account.ExternalId__c,
+    "codigoVeiculo": workOrder.Asset.ExternalId__c,
 //    "horarioChegada": workOrder.Store__r.DealerNetExternalId__c,
     "observacao": workOrder.Description,
-    "tipo": if(workOrder.Type__c == "Ativo") 1 else 0,
+    "tipo": mapAppointmentType(workOrder.Type__c),//if(workOrder.Type__c == "Ativo") true else false,
     "status": scheduling.Status__c,
 //    "codigoAtendimento": workOrder.Store__r.DealerNetExternalId__c,
 //    "numeroPreOrdem": workOrder.Store__r.DealerNetExternalId__c,
@@ -84,16 +86,16 @@ var scheduling = payload.compositeResponse.body[1].records[0]
     "clienteAguarda": workOrder.CustomerWaiting__c,
     "exigeLavagem": workOrder.RequiresWashing__c,
 //    "entregaDomicilio": workOrder.Store__r.DealerNetExternalId__c,
-    "km": workOrder.Store__r.CurrentMileage__c,
+    "km": workOrder.CurrentMileage__c,
     "clienteDesejaTransporte": workOrder.CustomerNeedsTransport__c,
     "clienteServicoValet": workOrder.ValetService__c,
     "servicoExpresso": workOrder.ExpressService__c,
-    "veiculoAno": workOrder.Asset__r.YearOfManufacture__c,
+    "veiculoAno": workOrder.Asset.YearOfManufacture__c,
     //"codigoGrupoAgendamento": workOrder.Store__r.DealerNetExternalId__c,
-    "codigoTipoServico": workOrder.WorkOrderType__r.ExternalId__c,
+     //"codigoTipoServico": mapAppointmentType(workOrder.Type__c),
 //    "mobilidade": workOrder.Store__r.DealerNetExternalId__c,
 //    "dataPreOrdem": workOrder.Store__r.DealerNetExternalId__c,
-    "chassiVeiculo": workOrder.Asset__r.Chassis__c,
+    "chassiVeiculo": workOrder.Asset.Chassis__c,
 //    "dataPedidoPecasEspeciais": workOrder.Store__r.DealerNetExternalId__c,
 //    "dataPecasRecebidas": workOrder.Store__r.DealerNetExternalId__c,
 //    "rebocado": workOrder.Store__r.DealerNetExternalId__c,
@@ -126,12 +128,13 @@ var productiveScheduling = payload.compositeResponse.body[2].records[0]
 
 var codResponsavel = productiveScheduling.Seller__r.ExternalId__c splitBy ("_")
 
+var agendamentoCod = vars.consultantResponse.GENERATED_KEYS
 ---
 lineItems map (lineItem) -> {
     //"OficinaServico_OSCod": lineItem.WorkOrderId, --> validar com o Andrei, se em algum momento vai ser necessário criar a OS no Dealer
-    "OficinaServico_AgendamentoCod": productiveScheduling.ExternalId__c,
+    "OficinaServico_AgendamentoCod": agendamentoCod,
     "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
-    "OficinaServico_TMOCod": (lineItem.Product2.ExternalId__c splitBy ("_")) [1], //Obrigatório
+    "OficinaServico_TMOCod": if (lineItem.Product2.ExternalId__c contains "") (lineItem.Product2.ExternalId__c splitBy  "")[0] else lineItem.Product2.ExternalId__c, //Obrigatório
     "OficinaServico_Qtde": lineItem.Quantity,
     "OficinaServico_Horas": lineItem.DurationTime__c,
     "OficinaServico_ValorUnitario": lineItem.TotalPrice,

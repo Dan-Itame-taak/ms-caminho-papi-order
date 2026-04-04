@@ -31,3 +31,14 @@ fun mapStore(code) = code match {
 	case "DEPOSITO FIAT VOTUPORANGA" -> "Fiat - Votuporanga - Deposito"
 	case "CENTRALIZADORA" -> "Centralizadora"
 }
+
+fun mapAppointmentType(code) = code match {
+	case "Internet" -> "I" 
+	case  "Receptivo" -> "R"
+	case "Presencial" -> "P"
+	case "Atendido" -> "T"
+	case "Complemento" -> "C"
+	case "Em pedido" -> "E"
+	case "On Star" -> "M"
+	case "Ativo" -> "A"
+}
