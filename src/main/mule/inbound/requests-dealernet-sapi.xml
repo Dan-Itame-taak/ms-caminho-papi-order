@@ -66,7 +66,7 @@ output application/json
       "type": "Invoice__c"
     },
     Number__c: nf.NotaFiscal_Numero,
-    Name: nf.NotaFiscal_Numero as String,
+    //Name: nf.NotaFiscal_Numero as String,
     Series__c: nf.NotaFiscal_Serie,
     Movement__c: nf.NotaFiscal_Movimento,
     TotalValue__c: nf.NotaFiscal_ValorTotal,
@@ -81,15 +81,15 @@ output application/json
     OperationNatureDescription__c: nf.NaturezaOperacao_Descricao,
     IssueDate__c: nf.NotaFiscal_DataEmissao,
     ExternalId__c: nf.K_NotaFiscal_Codigo,
-    (Account: {
+    (Account__r: {
       ExternalId__c: nf.K_NotaFiscal_PessoaCod
     }) if(!isEmpty(nf.K_NotaFiscal_PessoaCod)),
     (PaymentCondition__r: {
       ExternalId__c: nf.K_NotaFiscal_CondicaoPagamentoCod
     }) if(!isEmpty(nf.K_NotaFiscal_CondicaoPagamentoCod)),
-    Order__r: {
-      ExternalId__c: nf.Proposta_Pedido
-    }
+//    Order__r: {
+//      ExternalIdDealerNet__c: nf.Proposta_Pedido
+//    }
   }
 }
 ]]></ee:set-variable>

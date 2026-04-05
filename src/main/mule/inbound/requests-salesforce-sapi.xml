@@ -206,6 +206,10 @@ payload.id]]></ee:set-variable>
 output application/java
 ---
 []]]></ee:set-variable>
+				<ee:set-variable variableName="aggregateAditionalServiceResponse" ><![CDATA[%dw 2.0
+output application/java
+---
+[]]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<ee:transform doc:name="Composite Salesforce WorkOrder Get informations" doc:id="d4a4ce70-2d84-48ea-a7e4-ec740b9a449a">
@@ -219,19 +223,31 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT Asset__r.ExternalId__c, Asset__r.ModelCode__c, Asset__r.Product2.Name, Asset__r.Product2.VehicleFamilyCode__c, Asset__r.StockCode__c, Asset__r.Version__c, CreatedDate, DealerNetServiceCode__c, Description, EffectiveDate, ExternalIdDealerNet__c, MainContact__r.ContactPreference__c, OrderNumber, Store__r.DealerNetExternalId__c, TotalAmount, CommissionPercentage__c FROM Order WHERE Id = '"++ vars.orderId ++"'",
+      "url": "/services/data/v63.0/query?q=SELECT AssessmentUsedDealerNetCode__c, EndDate, Asset__r.ExternalId__c, Asset__r.ModelCode__c, Asset__r.Product2.Name, Asset__r.Product2.VehicleFamilyCode__c, Asset__r.StockCode__c, Asset__r.Version__c, CreatedDate, DealerNetServiceCode__c, Description, EffectiveDate, ExternalIdDealerNet__c, MainContact__r.ContactPreference__c, OrderNumber, Store__r.DealerNetExternalId__c, TotalAmount, CommissionPercentage__c FROM Order WHERE Id = '"++ vars.orderId ++"'",
       "referenceId": "OrderQuery"
     },
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT ListPrice, OrderId, UnitPrice, Discount__c FROM OrderItem WHERE OrderId = '"++ vars.orderId ++"'",
+      "url": "/services/data/v63.0/query?q=SELECT ListPrice, OrderId, UnitPrice, Discount__c, TotalPrice FROM OrderItem WHERE OrderId = '"++ vars.orderId ++"' AND IsVehicleProductLine__c = true",
       "referenceId": "OrderItemsQuery"
     },
     {
       "method": "GET",
       "url": "/services/data/v63.0/query?q=SELECT Id, UniqueNumber__c, ApprovedInstallmentAmount__c, CheckAgency__c, CheckingAccount__c, ConsortiumGroup__c, ConsortiumQuote__c, CreatedDate, Description__c, DueDate__c, FinancingBank__c, InterestAmount__c, LastModifiedDate, NumberInstallmentsApproved__c, Order__c, Order__r.Account.CPFCNPJ__c, PaymentCondition__r.ExternalId__c, PaymentCondition__r.Name, UsedVehicleEvaluation__r.VehiclePlate__c, UsedVehicleEvaluation__r.ExternalId__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM Installment__c WHERE Order__r.Id = '" ++ vars.orderId ++ "'",
       "referenceId": "InstallmentsQuery"
-    }
+    },
+    {
+			method: "GET",
+			url: "/services/data/v63.0/query?q=SELECT " ++
+				"Id, " ++
+				"OrderId, " ++
+				"Product2.ExternalId__c, " ++
+				"TotalPrice, " ++
+				"IncludedInFinancing__c, " ++
+				"Discount__c " ++
+				"FROM OrderItem WHERE OrderId = '" ++ vars.orderId ++ "' AND IsVehicleProductLine__c = false",
+			referenceId: "OrderItems"
+		}
   ]
 }
 ]]></ee:set-variable>
@@ -275,7 +291,8 @@ var enviaSms = if(orders.MainContact__r.ContactPreference__c contains ("Telefone
 	"Proposta_DataConfirmacao": orders.CreatedDate as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
 	"Proposta_PrecoPublico": lineItems.ListPrice,
 	"Proposta_DataValidadePedido": orders.EffectiveDate,
-	"Proposta_VeiculoValor": lineItems.UnitPrice,
+	"Proposta_VeiculoValor": lineItems.TotalPrice,
+	("Proposta_AvaliacaoUsadoCod": orders.AssessmentUsedDealerNetCode__c) if(!isEmpty(orders.AssessmentUsedDealerNetCode__c)),
 	//"Proposta_FinanceiraDes": orders.CreditAnalysis__r.FinancingBank__c,
 	//"Proposta_ModeloVeiculoDes": orders.Asset__r.Product2.Name,
 	//"Proposta_StatusFinanceira": orders.ExternalIdDealerNet__c,
@@ -374,8 +391,55 @@ var codigoProposta = vars.proposalResponse.GENERATED_KEYS
 	"installmentId": installment.Id,
 // PropostaParcela_Codigo confirmar com o Daniel
 }]]></ee:set-variable>
+				<ee:set-variable variableName="aditionalServicesRequest" ><![CDATA[%dw 2.0
+output application/json
+var orderItems = payload.compositeResponse.body[3].records
+var order = payload.compositeResponse.body[0].records[0]
+
+var codigoProposta = vars.proposalResponse.GENERATED_KEYS
+---
+orderItems map (item) -> {
+    "ServicoAdicional_Codigo": (item.Product2.ExternalId__c splitBy ("_"))[0] as Number,       // "1_AdditionalServices" -> usar apenas o número antes do "_"
+    "Proposta_Codigo": codigoProposta,
+    "PropostaServAdicional_Valor": item.TotalPrice,
+    //"PropostaServAdicional_XMLSeguro": null,                       // sem mapeamento SF
+    "PropostaServAdicional_DataPrevisao": order.EndDate,
+    "PropostaServAdicional_EmbutirFinanciamento": item.IncludedInFinancing__c,
+    //"PropostaServAdicional_UsuarioCodVendedor": item.Owner.DealerNetCode__c,
+    "PropostaServAdicional_Comprado": if(!isEmpty(item.TotalPrice) and item.TotalPrice > 0) 1 else 0,                           // valor fixo conforme mapeamento
+    //"RequisicaoCompra_Codigo": null,                               // sem mapeamento SF
+    ("PropostaServAdicional_MotVendaPerdidaCod": "34") if(!isEmpty(item.TotalPrice) and item.TotalPrice == 0), //SE o valor for zero, se               // sem mapeamento SF
+    "PropostaServAdicional_PercDesconto": item.Discount__c,
+    //"PropostaServAdicional_ArquivoUpload": null,                   // sem mapeamento SF
+    "PropostaServAdicional_StatusEntrega": "NCO",                  // valor fixo conforme mapeamento
+    //"PropostaServAdicional_ArquivoUploadNome": null,               // sem mapeamento SF
+    //"PropostaServAdicional_ArquivoUploadTipo": null,               // sem mapeamento SF
+    //"PropostaServAdicional_PessoaCod": item.Account.ExternalId__c,
+    //"PropostaServAdicional_Contrato": null,                        // sem mapeamento SF
+    //"PropostaServAdicional_ContratoFim": null,                     // sem mapeamento SF
+    //"PropostaServAdicional_ContratoInicio": null,                  // sem mapeamento SF
+    "aditionalServiceId": item.Id,
+}]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<foreach doc:name="For Each" doc:id="8583c747-e85c-4a5e-9332-88c92736081c" collection="#[vars.aditionalServicesRequest]">
+			<logger level="INFO" doc:name="Logger" doc:id="bed5bf03-2674-4e98-9b79-f0dee7be7969" message="teste" />
+			<dealernet-sapi:send-proposal-aditional-services doc:name="Send Proposal Aditional Services" doc:id="c3fb4c68-de51-411c-9388-f9ea2b22fcca" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="aditionalServiceResponse"/>
+			<ee:transform doc:name="Transform Message" doc:id="02fa7f60-f6f1-4412-9e5c-fe9908bcf8db" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="aditionalServiceResponse" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.aggregateAditionalServiceResponse ++ [{
+    "aditionalServiceId": payload.aditionalServiceId,
+    "dealerKey": payload.codigoParcelaProposta,
+    "additionalServiceKey": vars.aditionalServiceResponse.GENERATED_KEYS
+}]]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
 		<foreach doc:name="For Each" doc:id="52790ba8-aad7-48e8-8c90-7dd211fc7ca4" collection="#[vars.installmentsRequest]">
 			<logger level="INFO" doc:name="Logger" doc:id="18fb1043-6600-4ad1-9d20-031a383c6667" message="Integration: send-proposal-installments-to-dealernet | correlationId: #[correlationId] | payload: #[vars.installmentsRequest]" />
 			<dealernet-sapi:send-proposal-installments doc:name="Send Proposal Installments" doc:id="ede38751-2bf0-41c2-b3e6-b5cae8e95461" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="installmentsResponse"/>
@@ -694,5 +758,83 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+	</sub-flow>
+	<sub-flow name="send-aditional-services-to-dealernet-subflow" doc:id="6aff41ee-813d-4932-8de5-0496b11ed550" >
+		<ee:transform doc:name="vars orderId" doc:id="f05e5610-8c5d-4ab6-8dcd-e98696e12bb1" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="orderId" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="compositeRequest" doc:id="93477c51-ea81-40ce-be82-210007716afb" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	allOrNone: true,
+	compositeRequest: [
+		{
+			method: "GET",
+			url: "/services/data/v63.0/query?q=SELECT " ++
+				"Id, " ++
+				"OrderId, " ++
+				"Order.ExternalIdDealerNet__c, " ++
+				"Product2.ExternalId__c, " ++
+				"TotalPrice, " ++
+				"ForecastDate__c, " ++
+				"IncludeInFinancing__c, " ++
+				"Owner.DealerNetCode__c, " ++
+				"DiscountPercentage__c, " ++
+				"Account.ExternalId__c " ++
+				"FROM OrderItem WHERE OrderId = '" ++ vars.orderId ++ "'",
+			referenceId: "OrderItems"
+		}
+	]
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="d23f53ef-4cc0-409b-928a-1b50941c0dd8" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Aditional Services body request to Dealernet" doc:id="c08a4773-68da-4313-9eed-94297855b487" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var orderItems = payload.compositeResponse[0].body.records
+---
+orderItems map (item) -> {
+    "ServicoAdicional_Codigo": item.Product2.ExternalId__c,       // "1_AdditionalServices" -> usar apenas o número antes do "_"
+    "Proposta_Codigo": item.Order.ExternalIdDealerNet__c,
+    "PropostaServAdicional_Valor": item.TotalPrice,
+    "PropostaServAdicional_XMLSeguro": null,                       // sem mapeamento SF
+    "PropostaServAdicional_DataPrevisao": item.ForecastDate__c,
+    "PropostaServAdicional_EmbutirFinanciamento": item.IncludeInFinancing__c,
+    "PropostaServAdicional_UsuarioCodVendedor": item.Owner.DealerNetCode__c,
+    "PropostaServAdicional_Comprado": 1,                           // valor fixo conforme mapeamento
+    "RequisicaoCompra_Codigo": null,                               // sem mapeamento SF
+    "PropostaServAdicional_MotVendaPerdidaCod": null,              // sem mapeamento SF
+    "PropostaServAdicional_PercDesconto": item.DiscountPercentage__c,
+    "PropostaServAdicional_ArquivoUpload": null,                   // sem mapeamento SF
+    "PropostaServAdicional_StatusEntrega": "NCO",                  // valor fixo conforme mapeamento
+    "PropostaServAdicional_ArquivoUploadNome": null,               // sem mapeamento SF
+    "PropostaServAdicional_ArquivoUploadTipo": null,               // sem mapeamento SF
+    "PropostaServAdicional_PessoaCod": item.Account.ExternalId__c,
+    "PropostaServAdicional_Contrato": null,                        // sem mapeamento SF
+    "PropostaServAdicional_ContratoFim": null,                     // sem mapeamento SF
+    "PropostaServAdicional_ContratoInicio": null                   // sem mapeamento SF
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="send-assets-to-dealernet-subflow" doc:id="67ac3f14-8364-44c7-8ec2-bf4c234ee2d8" >
+		<logger level="INFO" doc:name="Logger" doc:id="417735e4-fc11-489c-a7aa-4b038c94f259" />
 	</sub-flow>
 </mule>
