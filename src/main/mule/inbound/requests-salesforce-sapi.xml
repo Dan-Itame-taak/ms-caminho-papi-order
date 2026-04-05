@@ -134,7 +134,7 @@ lineItems map (lineItem) -> {
     //"OficinaServico_OSCod": lineItem.WorkOrderId, --> validar com o Andrei, se em algum momento vai ser necessário criar a OS no Dealer
     "OficinaServico_AgendamentoCod": agendamentoCod,
     "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
-    "OficinaServico_TMOCod": if (lineItem.Product2.ExternalId__c contains "") (lineItem.Product2.ExternalId__c splitBy  "")[0] else lineItem.Product2.ExternalId__c, //Obrigatório
+    "OficinaServico_TMOCod": if (lineItem.Product2.ExternalId__c contains "_") (lineItem.Product2.ExternalId__c splitBy  "_")[0] else lineItem.Product2.ExternalId__c, //Obrigatório
     "OficinaServico_Qtde": lineItem.Quantity,
     "OficinaServico_Horas": lineItem.DurationTime__c,
     "OficinaServico_ValorUnitario": lineItem.TotalPrice,
@@ -277,7 +277,7 @@ var enviaSms = if(orders.MainContact__r.ContactPreference__c contains ("Telefone
 	"Proposta_Pedido": orders.OrderNumber,
 	"Proposta_Versao": 1,
 	"Proposta_Valor": orders.TotalAmount,
-	"Proposta_DataValidade": orders.EffectiveDate,
+	"Proposta_DataValidade": (orders.EffectiveDate as Date) ++ |23:59:00|, //OU fazar lógica para adicionar um dia ou sempre setar 23:59 no horário da data já atual
 	"Proposta_EnviaEmail": enviaEmail,
 	"Proposta_SMS": enviaSms,
 	"Proposta_EntregaPesquisaEmail": enviaEmail,
