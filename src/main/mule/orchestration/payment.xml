@@ -26,10 +26,10 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		<logger level="INFO" doc:name="Logger End Payment Method Flow" doc:id="9ca3a1f7-0a42-45df-b566-e8a5fee7d889" message="ntegration: payment-methods | Checkpoint: End   | correlationId: #[correlationId] | payload: #[payload]"/>
 		<error-handler ref="globalError_Router" />
 	</flow>
-	<flow name="send-simulations-updates" doc:id="7762875f-1a4f-4a36-ba4e-6d611154fa13" initialState="started">
+	<flow name="send-simulations-updates" doc:id="7762875f-1a4f-4a36-ba4e-6d611154fa13">
 		<scheduler doc:name="Scheduler" doc:id="a4bd4327-56b7-483c-ad4a-6809e720bdd8" >
 			<scheduling-strategy >
-				<fixed-frequency startDelay="1" timeUnit="DAYS"/>
+				<fixed-frequency startDelay="10" timeUnit="MINUTES" frequency="30"/>
 			</scheduling-strategy>
 		</scheduler>
 		<salesforce-sapi:get-creditanalysis doc:name="Get Clients Informations - Salesforce" doc:id="54fe5b12-64d9-4c8a-a845-5922048ed014" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>

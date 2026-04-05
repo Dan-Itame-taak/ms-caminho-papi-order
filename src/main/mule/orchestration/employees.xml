@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
 	<flow name="send-employees-shifts-to-salesforce" doc:id="59f02b15-c455-485f-a622-8266b1358fe4" >
 		<scheduler doc:name="Scheduler" doc:id="b43fad1d-b10d-4c9e-bd86-b8f645704e72" >
 			<scheduling-strategy >
@@ -131,9 +132,12 @@ payload]]></ee:set-payload>
 				<fixed-frequency frequency="15" startDelay="10" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
-		<scatter-gather doc:name="Scatter-Gather" doc:id="e9827647-1b94-47e0-8ac0-e54bef122c8d" >
-			<route >
-				<ee:transform doc:name="Variables to Get Consultants Schedulling and recordType" doc:id="fff9c87d-69dc-4d4f-937c-c5ce6a7bf897">
+		<flow-ref doc:name="scheduled-consultant-subFlow" doc:id="e1743209-84d2-464d-8f23-301f98477014" name="scheduled-consultant-subFlow"/>
+		<flow-ref doc:name="scheduled-productive-subFlow" doc:id="a95bae7d-abb9-4519-af71-382cf91a5161" name="scheduled-productive-subFlow"/>
+		<error-handler ref="globalError_Router" />
+	</flow>
+	<sub-flow name="scheduled-consultant-subFlow" doc:id="8dc59051-3496-47d0-b4a0-046bbfeef826" >
+		<ee:transform doc:name="Variables to Get Consultants Schedulling and recordType" doc:id="fff9c87d-69dc-4d4f-937c-c5ce6a7bf897">
 			<ee:message />
 			<ee:variables>
 				<ee:set-variable variableName="department"><![CDATA[%dw 2.0
@@ -148,18 +152,50 @@ output application/json
 output application/json
 ---
 "Consultor"]]></ee:set-variable>
-						<ee:set-variable variableName="company" ><![CDATA[%dw 2.0
+						<ee:set-variable variableName="company"><![CDATA[%dw 2.0
 output application/json
 ---
 attributes.queryParams.company]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-				<flow-ref doc:name="search-recordType-salesforce" doc:id="99fb1e36-63f5-42d8-8fa8-6f43a920784a" name="search-recordType-salesforce" target="rTypeCons"/>
-				<flow-ref doc:name="get-employees-scheduling-status" doc:id="7401a2ae-6b1e-4399-8dc5-2bf2787e754f" name="get-employees-scheduling-status"/>
-				<flow-ref doc:name="employees-scheduling-batch" doc:id="a27d9099-357a-4c0d-9fb4-7a8cadc022ee" name="employees-scheduling-batch"/>
-			</route>
-			<route >
-				<ee:transform doc:name="Variables to Get Mechanics Scheduliing and recordType" doc:id="65e8e8c8-2c31-4114-802a-b6f4dfa65c56">
+		<flow-ref doc:name="search-recordType-salesforce" doc:id="99fb1e36-63f5-42d8-8fa8-6f43a920784a" name="search-recordType-salesforce" target="rTypeCons" />
+		<flow-ref doc:name="get-employees-scheduling-status" doc:id="7401a2ae-6b1e-4399-8dc5-2bf2787e754f" name="get-employees-scheduling-status" />
+		<ee:transform doc:name="Variable to Create OS" doc:id="ecf51b2a-ecc1-4a4f-bd38-b12355f2f42b" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="vPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter !isBlank($.nomeConsultor)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="22095cf5-0417-4dc5-83d0-fa83507bf9f7" collection="#[vars.vPayload]">
+			<ee:transform doc:name="Map Payload to Create OS" doc:id="43da1072-d5a3-4b5f-b74e-960906d0d939" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+import * from Modules::orderFunctions
+output application/json
+---
+{
+    attributes:{
+        "type": "WorkOrder"
+    },
+    Account: {
+        ExternalId__c: payload.codigoCliente
+    },
+    Store__r: {
+        ExternalId__c: mapStore2(payload.codigoLoja)
+    }
+} ]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<flow-ref doc:name="send-service-order-to-salesforce" doc:id="574407ab-804f-4f17-abb8-069e843e927f" name="send-service-order-to-salesforce"/>
+		</foreach>
+		<flow-ref doc:name="employees-scheduling-batch" doc:id="a27d9099-357a-4c0d-9fb4-7a8cadc022ee" name="employees-scheduling-batch" />
+	</sub-flow>
+	<sub-flow name="scheduled-productive-subFlow" doc:id="23005550-eb5f-4bf1-bf7f-6e97cd4a89a8" >
+		<ee:transform doc:name="Variables to Get Mechanics Scheduliing and recordType" doc:id="65e8e8c8-2c31-4114-802a-b6f4dfa65c56">
 			<ee:message />
 			<ee:variables>
 				<ee:set-variable variableName="department"><![CDATA[%dw 2.0
@@ -174,19 +210,13 @@ output application/json
 output application/json
 ---
 "Produtivo"]]></ee:set-variable>
-						<ee:set-variable variableName="company" ><![CDATA[%dw 2.0
-output application/json
----
-attributes.queryParams.company]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-				<flow-ref doc:name="search-recordType-salesforce" doc:id="22ee7e2c-24e6-4704-ab2a-5b0d52d5511c" name="search-recordType-salesforce" target="rTypeCons"/>
-				<flow-ref doc:name="get-employees-scheduling-status" doc:id="7c4dfe88-6086-436d-b814-61017d25147e" name="get-employees-scheduling-status"/>
-				<flow-ref doc:name="employees-scheduling-batch" doc:id="981581ea-7f6b-4f1c-8728-2ddce67e29ad" name="employees-scheduling-batch"/>
-			</route>
-		</scatter-gather>
-		<error-handler ref="globalError_Router" />
-	</flow>
+		<flow-ref doc:name="search-recordType-salesforce" doc:id="22ee7e2c-24e6-4704-ab2a-5b0d52d5511c" name="search-recordType-salesforce" target="rTypeCons" />
+		<flow-ref doc:name="get-employees-scheduling-status" doc:id="7c4dfe88-6086-436d-b814-61017d25147e" name="get-employees-scheduling-status" />
+		<logger level="INFO" doc:name="Logger" doc:id="527dad01-f7e1-44d1-9b47-7b5ac524caf1" />
+		<flow-ref doc:name="employees-scheduling-batch" doc:id="981581ea-7f6b-4f1c-8728-2ddce67e29ad" name="employees-scheduling-batch" />
+	</sub-flow>
 	<flow name="employees-scheduling-batch" doc:id="bc22e0d8-33b0-46c6-a2cc-95cec8169044" >
 		<batch:job jobName="employeesBatch_Job" doc:id="199e81e6-443f-4f52-b295-85b84981fb1d" blockSize="1000" maxFailedRecords="-1">
 			<batch:process-records >
