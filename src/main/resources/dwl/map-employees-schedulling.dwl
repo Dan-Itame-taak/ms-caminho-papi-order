@@ -9,6 +9,8 @@ if (!isBlank(payload.nomeConsultor)){
     Seller__r: {
         ExternalId__c: "consultor_" ++ (payload.codigoConsultor as String)
     },
+    Name: "Agendamento " ++ payload.horarioOcupado default "",
+    Status__c: if(payload.statusAgendamento == "FIM") "FIN" else payload.statusAgendamento,
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String ,
     RecordTypeId: vars.rTypeCons
@@ -18,10 +20,12 @@ else
     attributes: {
         "type": "Scheduling__c"
     },
-    ExternalId__c: (payload.codigoAgendamento as String) ++ "_" ++ (payload.codigoProdutivo as String),
+    ExternalId__c: (payload.codigoIdServico as String) ++ "_" ++ (payload.codigoProdutivo as String),
     Seller__r: {
         ExternalId__c: "produtivo_" ++ (payload.codigoProdutivo as String)
     },
+    Name: "Agendamento " ++ payload.horarioOcupado default "",
+    Status__c: if(payload.statusAgendamento == "FIM") "FIN" else payload.statusAgendamento,
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String,
     RecordTypeId: vars.rTypeCons
