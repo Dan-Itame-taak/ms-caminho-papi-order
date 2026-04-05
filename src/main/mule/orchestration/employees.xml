@@ -178,19 +178,23 @@ import * from Modules::orderFunctions
 output application/json
 ---
 {
-    attributes:{
-        "type": "WorkOrder"
-    },
-    Account: {
-        ExternalId__c: payload.codigoCliente
-    },
-    Store__r: {
-        ExternalId__c: mapStore2(payload.codigoLoja)
-    }
-} ]]></ee:set-payload>
+	allOrNone: false,
+	records: [{
+		attributes: {
+			"type": "WorkOrder"
+		},
+		Account: {
+			ExternalId__c: payload.codigoCliente
+		},
+		Store__r: {
+			ExternalId__c: mapStore2(payload.codigoLoja)
+		}
+	}]
+}
+]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<flow-ref doc:name="send-service-order-to-salesforce" doc:id="574407ab-804f-4f17-abb8-069e843e927f" name="send-service-order-to-salesforce"/>
+			<flow-ref doc:name="send-os-status-to-salesforce" doc:id="574407ab-804f-4f17-abb8-069e843e927f" name="send-os-status-to-salesforce"/>
 		</foreach>
 		<flow-ref doc:name="employees-scheduling-batch" doc:id="a27d9099-357a-4c0d-9fb4-7a8cadc022ee" name="employees-scheduling-batch" />
 	</sub-flow>
