@@ -5,7 +5,7 @@
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
-	<flow name="send-service-order-to-salesforce" doc:id="f7c413f7-4bd0-4c74-8c47-74c24d74c41f" >
+	<flow name="send-service-order-to-salesforce" doc:id="f7c413f7-4bd0-4c74-8c47-74c24d74c41f" initialState="stopped">
 		<scheduler doc:name="Scheduler" doc:id="42d69755-8d50-4f0e-ae69-2c9f624e26a0" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>

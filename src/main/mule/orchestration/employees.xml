@@ -214,6 +214,7 @@ output application/json
 		</ee:transform>
 		<flow-ref doc:name="search-recordType-salesforce" doc:id="22ee7e2c-24e6-4704-ab2a-5b0d52d5511c" name="search-recordType-salesforce" target="rTypeCons" />
 		<flow-ref doc:name="get-employees-scheduling-status" doc:id="7c4dfe88-6086-436d-b814-61017d25147e" name="get-employees-scheduling-status" />
+		<logger level="INFO" doc:name="Logger" doc:id="527dad01-f7e1-44d1-9b47-7b5ac524caf1" />
 		<flow-ref doc:name="employees-scheduling-batch" doc:id="981581ea-7f6b-4f1c-8728-2ddce67e29ad" name="employees-scheduling-batch" />
 	</sub-flow>
 	<flow name="employees-scheduling-batch" doc:id="bc22e0d8-33b0-46c6-a2cc-95cec8169044" >
