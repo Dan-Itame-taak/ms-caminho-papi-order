@@ -5,7 +5,7 @@ if (!isBlank(payload.nomeConsultor)){
     attributes: {
         "type": "Scheduling__c"
     },
-    ExternalId__c: (payload.codigoAgendamento as String) ++ "_" ++ (payload.codigoConsultor as String),
+    ExternalId__c: (payload.codigoAgendamento as String),
     Seller__r: {
         ExternalId__c: "consultor_" ++ (payload.codigoConsultor as String)
     },
@@ -13,7 +13,8 @@ if (!isBlank(payload.nomeConsultor)){
     Status__c: if(payload.statusAgendamento == "FIM") "FIN" else payload.statusAgendamento,
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String ,
-    RecordTypeId: vars.rTypeCons
+    RecordTypeId: vars.rTypeCons,
+    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento}
 }
 else
 {
@@ -28,5 +29,6 @@ else
     Status__c: if(payload.statusAgendamento == "FIM") "FIN" else payload.statusAgendamento,
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String,
-    RecordTypeId: vars.rTypeCons
+    RecordTypeId: vars.rTypeCons,
+    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento}
 }
