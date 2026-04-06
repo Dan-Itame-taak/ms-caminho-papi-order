@@ -44,7 +44,7 @@ payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</sub-flow>
-	<flow name="requests-dealernet-sapiFlow" doc:id="6e9c8b92-32f5-4018-80f0-8574e0d0b824" >
+	<flow name="send-invoices-and-proposal-status-to-salesforce" doc:id="6e9c8b92-32f5-4018-80f0-8574e0d0b824" >
 		<scheduler doc:name="Scheduler" doc:id="c261fc62-d0db-40ee-af92-a8a3ff382207" >
 			<scheduling-strategy >
 				<fixed-frequency startDelay="1" timeUnit="MINUTES"/>
@@ -106,14 +106,10 @@ output application/json
   }
 }
 ]]></ee:set-variable>
-				<ee:set-variable variableName="orderItemRequest" ><![CDATA[%dw 2.0
-output application/java
----
-null]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="For Each" doc:id="b217ecc1-86c3-42ca-9af1-49a039042e16" collection="#[vars.invoiceRequest]" batchSize="200">
-			<ee:transform doc:name="Transform Message" doc:id="9174f92c-df46-4397-ac1d-a6531e98611a" >
+			<ee:transform doc:name="composite body request" doc:id="9174f92c-df46-4397-ac1d-a6531e98611a" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -125,17 +121,9 @@ output application/json
 				</ee:message>
 			</ee:transform>
 			<salesforce-sapi:send-invoices-to-salesforce doc:name="Send Invoices to Salesforce" doc:id="06cab923-b331-451f-8ce2-4ca96da475d4" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
-			<ee:transform doc:name="Transform Message1" doc:id="619d0082-4edb-4aa1-abdc-ce57a08c7b95" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-				</ee:message>
-			</ee:transform>
 		</foreach>
 		<foreach doc:name="For Each" doc:id="fc5e2a42-d3a1-48c8-aa44-749321f06f9b" collection="vars.orderRequest" batchSize="200">
-			<ee:transform doc:name="Transform Message" doc:id="575139f3-763c-423e-af48-0ba22c940fe3" >
+			<ee:transform doc:name="composite body request" doc:id="575139f3-763c-423e-af48-0ba22c940fe3" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
