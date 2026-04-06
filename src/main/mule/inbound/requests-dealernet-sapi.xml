@@ -94,9 +94,18 @@ output application/json
 }
 ]]></ee:set-variable>
 				<ee:set-variable variableName="orderRequest" ><![CDATA[%dw 2.0
-output application/java
+output application/json
 ---
-null]]></ee:set-variable>
+{
+  order: payload map (ord) -> {
+    attributes: {
+      "type": "Order"
+    },
+    Status: if(ord.Proposta_Status == "FAT") "Faturado" else null,
+    ExternalIdDealerNet__c: ord.Proposta_Pedido,
+  }
+}
+]]></ee:set-variable>
 				<ee:set-variable variableName="orderItemRequest" ><![CDATA[%dw 2.0
 output application/java
 ---
@@ -115,8 +124,7 @@ output application/json
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<salesforce-sapi:send-invoices-to-salesforce doc:name="Send Invoices to Salesforce" doc:id="e02e39af-13b6-4054-ae67-802110c445a1" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
-		</salesforce-sapi:send-invoices-to-salesforce>
+			<salesforce-sapi:send-invoices-to-salesforce doc:name="Send Invoices to Salesforce" doc:id="06cab923-b331-451f-8ce2-4ca96da475d4" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
 			<ee:transform doc:name="Transform Message1" doc:id="619d0082-4edb-4aa1-abdc-ce57a08c7b95" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
@@ -125,6 +133,20 @@ output application/json
 payload]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
+		</foreach>
+		<foreach doc:name="For Each" doc:id="fc5e2a42-d3a1-48c8-aa44-749321f06f9b" collection="vars.orderRequest" batchSize="200">
+			<ee:transform doc:name="Transform Message" doc:id="575139f3-763c-423e-af48-0ba22c940fe3" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  allOrNone: false,
+  records: flatten(payload.order)
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<salesforce-sapi:update-proposal-to-salesforce doc:name="Update Proposal to Salesforce" doc:id="b5531463-f13c-49ea-90d3-8dd21ff13985" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
 		</foreach>
 	</flow>
 </mule>
