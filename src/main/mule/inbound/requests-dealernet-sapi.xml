@@ -84,9 +84,9 @@ output application/json
     (Account__r: {
       ExternalId__c: nf.K_NotaFiscal_PessoaCod
     }) if(!isEmpty(nf.K_NotaFiscal_PessoaCod)),
-    (PaymentCondition__r: {
-      ExternalId__c: nf.K_NotaFiscal_CondicaoPagamentoCod
-    }) if(!isEmpty(nf.K_NotaFiscal_CondicaoPagamentoCod)),
+//    (PaymentCondition__r: {
+//      ExternalId__c: nf.K_NotaFiscal_CondicaoPagamentoCod
+//    }) if(!isEmpty(nf.K_NotaFiscal_CondicaoPagamentoCod)),
 //    Order__r: {
 //      ExternalIdDealerNet__c: nf.Proposta_Pedido
 //    }
@@ -102,7 +102,7 @@ output application/json
       "type": "Order"
     },
     Status: if(ord.Proposta_Status == "FAT") "Faturado" else null,
-    ExternalIdDealerNet__c: ord.Proposta_Pedido,
+    ExternalIdDealerNet__c: ord.K_Proposta_Codigo,
   }
 }
 ]]></ee:set-variable>
