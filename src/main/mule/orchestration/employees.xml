@@ -167,7 +167,7 @@ attributes.queryParams.company]]></ee:set-variable>
 				<ee:set-variable variableName="vPayload" ><![CDATA[%dw 2.0
 output application/json
 ---
-payload filter !isBlank($.nomeConsultor)]]></ee:set-variable>
+payload //filter !isBlank($.nomeConsultor)]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="For Each" doc:id="22095cf5-0417-4dc5-83d0-fa83507bf9f7" collection="#[vars.vPayload]">
@@ -183,6 +183,7 @@ output application/json
 		attributes: {
 			"type": "WorkOrder"
 		},
+		SchedulingExternalId__c: payload.codigoAgendamento,
 		Account: {
 			ExternalId__c: payload.codigoCliente
 		},
@@ -218,6 +219,58 @@ output application/json
 		</ee:transform>
 		<flow-ref doc:name="search-recordType-salesforce" doc:id="22ee7e2c-24e6-4704-ab2a-5b0d52d5511c" name="search-recordType-salesforce" target="rTypeCons" />
 		<flow-ref doc:name="get-employees-scheduling-status" doc:id="7c4dfe88-6086-436d-b814-61017d25147e" name="get-employees-scheduling-status" />
+		<ee:transform doc:name="Variable to Create OS Line Items" doc:id="813bafcd-817c-455e-86b7-0605608d0a9a">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="vPayload"><![CDATA[%dw 2.0
+output application/json
+---
+payload ]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="e0cdbf33-921d-49e9-b9b0-46983c097036" >
+			<ee:transform doc:name="Map Payload to Create OS Line Items" doc:id="6494c010-497a-4b5b-92f7-39183f61e7ab" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="vPayload" ><![CDATA[%dw 2.0
+var extTMO = if(!isBlank(payload.modeloVeiculo)) payload.codigoTMO ++ "_" ++ payload.modeloVeiculo
+    		else payload.codigoTMO
+output application/json
+---
+{
+	allOrNone: false,
+	records: [
+		{
+	attributes: {
+		"type": "WorkOrderLineItem"
+	},
+    ExternalId__c: payload.codigoTMO ++ "_" ++ payload.codigoIdServico,
+    DurationTime__c: payload.duracaoServico,
+    TmoExecutes__c: payload.executa,
+    TmoRequiresTest__c: payload.exigeTesteVeiculo,
+    TmoPrioritario__c: payload.prioritario,
+    ExpressReview__c: payload.servicoRapido,
+    TmoCharges__c: payload.cobra,
+    ExecutionSector__c: payload.setorExecucao,
+    Quantity: payload.quantidadeTMO,
+    Product2: {
+    	ExternalId__c: extTMO
+    },
+    WorkOrderType__r: {
+        ExternalId__c: payload.codigoTipoOs
+    },
+    UnitPrice: payload.valorUnitario,
+    PricebookEntry: {
+        ExternalId__c: "WorkOrderTMO" ++ "_" ++ extTMO as String
+    }
+} 
+	]
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="send-os-lineItems-to-salesforce" doc:id="8afb5dcc-e8bc-4596-b1d8-c9a9e673e0dd" name="send-os-lineItems-to-salesforce"/>
+		</foreach>
 		<logger level="INFO" doc:name="Logger" doc:id="527dad01-f7e1-44d1-9b47-7b5ac524caf1" />
 		<flow-ref doc:name="employees-scheduling-batch" doc:id="981581ea-7f6b-4f1c-8728-2ddce67e29ad" name="employees-scheduling-batch" />
 	</sub-flow>
@@ -243,6 +296,7 @@ output application/json
 							</ee:message>
 						</ee:transform>
 						<flow-ref doc:name="send-employees-schedulling" doc:id="a8fd60b9-168b-4173-bfac-58cfa5a8c386" name="send-employees-schedulling"/>
+						<logger level="INFO" doc:name="Logger" doc:id="d32feb76-6b65-49d2-b09e-d8605cf87267" message="#[payload]"/>
 					</batch:aggregator>
 				</batch:step>
 			</batch:process-records>

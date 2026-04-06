@@ -21,7 +21,7 @@ else
     attributes: {
         "type": "Scheduling__c"
     },
-    ExternalId__c: (payload.codigoIdServico as String) ++ "_" ++ (payload.codigoProdutivo as String),
+    ExternalId__c: (payload.codigoIdServico as String) ,
     Seller__r: {
         ExternalId__c: "produtivo_" ++ (payload.codigoProdutivo as String)
     },
@@ -30,5 +30,6 @@ else
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String,
     RecordTypeId: vars.rTypeCons,
-    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento}
+    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento},
+    WorkOrderLineItem__r: {ExternalId__c: payload.codigoTMO ++ "_" ++ payload.codigoIdServico}
 }
