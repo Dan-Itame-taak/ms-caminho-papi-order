@@ -234,8 +234,7 @@ payload ]]></ee:set-variable>
 				</ee:message>
 				<ee:variables >
 					<ee:set-variable variableName="vPayload" ><![CDATA[%dw 2.0
-var extTMO = if(!isBlank(payload.modeloVeiculo)) payload.codigoTMO ++ "_" ++ payload.modeloVeiculo
-    		else payload.codigoTMO
+import * from Modules::orderFunctions
 output application/json
 ---
 {
@@ -245,24 +244,27 @@ output application/json
 	attributes: {
 		"type": "WorkOrderLineItem"
 	},
-    ExternalId__c: payload.codigoTMO ++ "_" ++ payload.codigoIdServico,
+    ExternalId__c: payload.TMOExternalId ++ "_" ++ payload.codigoIdServico,
     DurationTime__c: payload.duracaoServico,
     TmoExecutes__c: payload.executa,
     TmoRequiresTest__c: payload.exigeTesteVeiculo,
     TmoPrioritario__c: payload.prioritario,
     ExpressReview__c: payload.servicoRapido,
     TmoCharges__c: payload.cobra,
-    ExecutionSector__c: payload.setorExecucao,
+    ExecutionSector__c: mapExecSec(payload.setorExecucao),
     Quantity: payload.quantidadeTMO,
+    WorkOrder:{
+    	SchedulingExternalId__c: payload.codigoAgendamento
+    },
     Product2: {
-    	ExternalId__c: extTMO
+    	ExternalId__c: payload.TMOExternalId
     },
     WorkOrderType__r: {
         ExternalId__c: payload.codigoTipoOs
     },
     UnitPrice: payload.valorUnitario,
     PricebookEntry: {
-        ExternalId__c: "WorkOrderTMO" ++ "_" ++ extTMO as String
+        ExternalId__c: "WorkOrderTMO" ++ "_" ++ payload.TMOExternalId
     }
 } 
 	]

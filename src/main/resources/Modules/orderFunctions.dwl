@@ -101,3 +101,11 @@ fun mapStore2(code) = code match {
 	case "DEPOSITO FIAT VOTUPORANGA" -> "Fiat - Votuporanga - Deposito"
 	case "33" -> "Fiat - Votuporanga - Deposito"
 }
+
+fun mapExecSec(sector) = sector match {
+	case "SEN" -> "Sempre Novo"
+	case "FIE" -> "Fiat Empresas"
+	case "EXL" -> "Express Lane"
+	case "OFC" -> "Oficina"
+	case "FEP" -> "Funilaria e Pintura"
+}
