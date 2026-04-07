@@ -63,12 +63,6 @@
 		</dependency>
 		<dependency>
 			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
-			<artifactId>mule-plugin-dealernet-sapi</artifactId>
-			<version>1.0.20</version>
-			<classifier>mule-plugin</classifier>
-		</dependency>
-		<dependency>
-			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
 			<artifactId>mule-plugin-fandi-sapi</artifactId>
 			<version>1.0.1</version>
 			<classifier>mule-plugin</classifier>
@@ -96,6 +90,12 @@
 			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
 			<artifactId>mule-plugin-salesforce-sapi</artifactId>
 			<version>1.0.26</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
+			<artifactId>mule-plugin-dealernet-sapi</artifactId>
+			<version>1.0.23</version>
 			<classifier>mule-plugin</classifier>
 		</dependency>
 	</dependencies>

@@ -612,7 +612,7 @@ var installment = payload.compositeResponse.body[1].records[0]
 	"AvaliacaoUsado_ValorTOP": asset.FipeValue__c,
 	"AvaliacaoUsado_ValorSugeridoVenda": asset.CaminhoPrice__c,
 	"AvaliacaoUsado_Status": "AUT", //asset.Status__c,
-	"AvaliacaoUsado_VeiculoAnoCod": asset.YearCode__c,
+	"AvaliacaoUsado_VeiculoAnoCod": (asset.YearCode__c splitBy  "_")[0],
 	"AvaliacaoUsado_Chassi": asset.VehicleVIN__c,
 	"AvaliacaoUsado_NroRenavam": asset.Renavam__c,
 	"Atendimento_Codigo": installment.Quote__r.Opportunity.DealerNetServiceCode__c,
@@ -836,8 +836,5 @@ orderItems map (item) -> {
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-	</sub-flow>
-	<sub-flow name="send-assets-to-dealernet-subflow" doc:id="67ac3f14-8364-44c7-8ec2-bf4c234ee2d8" >
-		<logger level="INFO" doc:name="Logger" doc:id="417735e4-fc11-489c-a7aa-4b038c94f259" />
 	</sub-flow>
 </mule>
