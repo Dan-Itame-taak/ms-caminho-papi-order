@@ -14,7 +14,7 @@ if (!isBlank(payload.nomeConsultor)){
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String ,
     RecordTypeId: vars.rTypeCons,
-    WorkOrder:{SchedulingExternalId__c: payload.codigoAgendamento}
+    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento}
 }
 else
 {
@@ -30,6 +30,6 @@ else
     StartDate__c: payload.horarioOcupado,
     EndDate__c: ((payload.horarioOcupado as LocalDateTime) + |PT30M|) as String,
     RecordTypeId: vars.rTypeCons,
-    WorkOrder:{SchedulingExternalId__c: payload.codigoAgendamento},
-    WorkOrderLineItem: {ExternalId__c: payload.TMOExternalId ++ "_" ++ payload.codigoIdServico}
+    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento},
+    WorkOrderLineItem__r: {ExternalId__c: payload.TMOExternalId ++ "_" ++ payload.codigoIdServico}
 }
