@@ -27,7 +27,7 @@ http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schem
 			<ee:transform doc:name="Error Payload" doc:id="82b22e87-4774-4ec6-8abe-c93ed973cf14" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
-var cause = if(error.exception.errorMessage.payload.cause != null) error.exception.errorMessage.payload.cause.message
+var cause = if(error.exception.errorMessage.payload.cause != null) error.exception.errorMessage.payload.cause
 else if(error.exception.errorMessage.payload != null) error.exception.errorMessage.payload 
 else error.exception.cause.message
 output application/json
@@ -42,7 +42,7 @@ output application/json
 				<ee:variables >
 					<ee:set-variable variableName="httpStatus" ><![CDATA[400]]></ee:set-variable>
 					<ee:set-variable variableName="erro" ><![CDATA[%dw 2.0
-var cause = if(error.exception.errorMessage.payload.cause != null) error.exception.errorMessage.payload.cause.message
+var cause = if(error.exception.errorMessage.payload.cause != null) error.exception.errorMessage.payload.cause
 else if(error.exception.errorMessage.payload != null) error.exception.errorMessage.payload 
 else error.exception.cause.message
 output application/json

@@ -47,7 +47,7 @@ payload]]></ee:set-payload>
 	<flow name="send-invoices-and-proposal-status-to-salesforce" doc:id="6e9c8b92-32f5-4018-80f0-8574e0d0b824" >
 		<scheduler doc:name="Scheduler" doc:id="c261fc62-d0db-40ee-af92-a8a3ff382207" >
 			<scheduling-strategy >
-				<fixed-frequency startDelay="1" timeUnit="MINUTES"/>
+				<fixed-frequency startDelay="1" timeUnit="MINUTES" frequency="30"/>
 			</scheduling-strategy>
 		</scheduler>
 		<tracing:with-correlation-id doc:name="With CorrelationID" doc:id="d156474b-2ce6-40c3-986a-38cb3503ac9b" correlationId="#[correlationId]">

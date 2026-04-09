@@ -3,13 +3,13 @@
 <mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-	<flow name="register-serviceFlow" doc:id="2fb330b1-98c1-4b25-87b4-3a8038256ef5" >
+	<flow name="register-serviceFlow" doc:id="2fb330b1-98c1-4b25-87b4-3a8038256ef5" initialState="stopped">
 		<scheduler doc:name="Scheduler" doc:id="100f1148-1d2b-46a4-af96-a12f3a498372" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
-		<logger level="INFO" doc:name="Logger" doc:id="96054a6c-a800-419e-aeef-6a06864916d8" />
+		<logger level="INFO" doc:name="Logger" doc:id="ed3a65c6-094b-4faa-8b71-b8ee39a7f574" />
 		<error-handler ref="globalError_Router" />
 	</flow>
 </mule>
