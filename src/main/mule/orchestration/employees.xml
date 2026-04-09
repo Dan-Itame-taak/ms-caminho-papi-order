@@ -256,9 +256,6 @@ output application/json
     WorkOrder:{
     	SchedulingExternalId__c: payload.codigoAgendamento
     },
-    Product2: {
-    	ExternalId__c: payload.TMOExternalId
-    },
     WorkOrderType__r: {
         ExternalId__c: payload.codigoTipoOs
     },
