@@ -17,7 +17,7 @@ output application/json
     },
     StartDate: payload.dataCriacao,
     EndDate: payload.dataLiberacaoVeiculo,
-    DurationTime__c: payload.horasDuracaoServico,
+    DurationTime__c: (payload.horasDuracaoServico / 3600),
     ExpressReview__c: payload.servicoRapido,
     Quantitiy: payload.quantidadePeca,
     WorkOrderId: payload.numeroOs,

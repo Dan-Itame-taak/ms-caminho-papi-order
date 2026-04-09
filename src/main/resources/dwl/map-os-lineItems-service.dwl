@@ -6,7 +6,7 @@ var finalMap = pluckedPayload map ((value, index) -> {
     ExternalId__c: value.codigoServico ++ "_" ++ value.numeroOs,
     StartDate: value.dataCriacao,
     EndDate: value.dataLiberacaoVeiculo,
-    DurationTime__c: value.horasDuracaoServico,
+    DurationTime__c: (value.horasDuracaoServico / 3600),
     TmoExecutes__c: value.executa,
     TmoRequiresTest__c: value.exigeTeste,
     TmoPrioritario__c: value.prioritario,
@@ -21,7 +21,7 @@ var finalMap = pluckedPayload map ((value, index) -> {
         ExternalId__c: value.codigoTipoOs
     },
     UnitPrice: value.valorUnitarioServico,
-    DurationTime__c: value.horasDuracaoServico,
+    //DurationTime__c: value.horasDuracaoServico,
     PricebookEntry: {
         ExternalId__c: "posvenda_" ++ value.codigoEmpresa ++ "_" ++ value.codigoServico
     }
