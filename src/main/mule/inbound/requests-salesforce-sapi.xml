@@ -309,6 +309,7 @@ var enviaSms = if(orders.MainContact__r.ContactPreference__c contains ("Telefone
 	"Proposta_LiberacaoExtra": "0",
 	"Proposta_AprovacaoEntrega": "0",
 	"Proposta_IndicadorPresenca": "1",
+	"Proposta_PercCustoOperacional": "0"
 }]]></ee:set-variable>
 				<ee:set-variable variableName="installmentsRequest" ><![CDATA[%dw 2.0
 output application/json
