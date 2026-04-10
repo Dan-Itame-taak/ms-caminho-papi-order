@@ -11,6 +11,7 @@ if (!isBlank(payload.nomeConsultor)){
     Seller__r: {
         ExternalId__c: "consultor_" ++ (payload.codigoConsultor as String)
     },
+    Observation__c: payload.observacao,
     Name: "Agendamento " ++ (payload.horarioOcupado)[0 to 18] as DateTime as String {format: 'dd/MM/yyyy HH:mm:SS'} default "",
     Status__c: if(payload.statusAgendamento == "FIM") "FIN" else payload.statusAgendamento,
     StartDate__c: (payload.horarioOcupado as DateTime + |PT3H|)[0 to 18] as String,

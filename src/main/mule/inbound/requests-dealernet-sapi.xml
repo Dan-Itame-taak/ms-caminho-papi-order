@@ -137,4 +137,16 @@ output application/json
 			<salesforce-sapi:update-proposal-to-salesforce doc:name="Update Proposal to Salesforce" doc:id="b5531463-f13c-49ea-90d3-8dd21ff13985" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
 		</foreach>
 	</flow>
+	<sub-flow name="get-vehicles-reservation-in-dealernet" doc:id="9aa8aee2-d812-4169-8980-23ec5e514079" >
+		<logger level="INFO" doc:name="Logger" doc:id="3d7d977e-84aa-437b-87d2-b715b4e0cac7" message="Integration: #[vars.integration] | CorrelationId: #[correlationId] | Date: #[vars.dateCarReservation]  "/>
+		<dealernet-sapi:get-car-reservation doc:name="Get Car Reservation" doc:id="6cbb5a29-27bd-4fa0-aa20-98244cdd3ce6" config-ref="Dealernet_sapi_Config" time-amount="#[vars.dateCarReservation]" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<ee:transform doc:name="Response Payload" doc:id="e5a4199c-66fd-4a94-ab34-dc5fff796907" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
 </mule>

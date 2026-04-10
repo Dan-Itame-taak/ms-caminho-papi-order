@@ -31,6 +31,11 @@ http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schem
 		</salesforce-sapi:send-service-order-line-items>
 		<logger level="INFO" doc:name="Logger" doc:id="ec626990-f371-4d50-8eea-6f108776bb0f" message="#[payload]"/>
 	</sub-flow>
+	<sub-flow name="send-vehicle-reservation-status-to-salesforce" doc:id="e70a747e-ab11-4493-9476-0e556175bccd" >
+		<logger level="INFO" doc:name="Logger Before Request" doc:id="0b9b37b0-4899-4dd7-b52c-dbcf5e15b8d7" message="Integration: send-vehicles-reservation | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)] " />
+		<salesforce-sapi:send-vehicles-reservation-status doc:name="Send Vehicles Reservation Status" doc:id="879a70f1-8387-494d-8810-bc0eda8553bd" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+		<logger level="INFO" doc:name="Logger" doc:id="9a9b1bf3-925d-4c78-98fc-b76549241592" message="#[payload]" />
+	</sub-flow>
 	<sub-flow name="send-consultant-and-productive-appointment-to-dealer" doc:id="68438a0c-03ab-40aa-9328-daaa80d807a7" >
 		<ee:transform doc:name="workOrderId" doc:id="fc3fb868-0390-4157-abc7-195c60154c03" >
 			<ee:message >

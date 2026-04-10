@@ -36,11 +36,22 @@ fun mapAppointmentType(code) = code match {
 	case "Internet" -> "I" 
 	case  "Receptivo" -> "R"
 	case "Presencial" -> "P"
-	case "Atendido" -> "T"
+	case "Atendido" -> "A"
 	case "Complemento" -> "C"
 	case "Em pedido" -> "E"
-	case "On Star" -> "M"
-	case "Ativo" -> "A"
+	case "On Star" -> "T"
+	case "Ativo" -> "1"
+}
+
+fun mapAppointmentTypeReversed(code) = code match {
+	case "I" -> "Internet" 
+	case  "R" -> "Receptivo"
+	case "P" -> "Presencial"
+	case "A" -> "Atendido"
+	case "C" -> "Complemento"
+	case "E" -> "Em pedido"
+	case "T" -> "On Star"
+	case "1" -> "Ativo"
 }
 
 fun mapStore2(code) = code match {

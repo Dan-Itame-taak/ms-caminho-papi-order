@@ -1,15 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-	<flow name="register-serviceFlow" doc:id="2fb330b1-98c1-4b25-87b4-3a8038256ef5" initialState="stopped">
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="send-vehicle-reservation-status-from-dealernet-to-salesforce-main" doc:id="2fb330b1-98c1-4b25-87b4-3a8038256ef5" initialState="stopped">
 		<scheduler doc:name="Scheduler" doc:id="100f1148-1d2b-46a4-af96-a12f3a498372" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
-		<logger level="INFO" doc:name="Logger" doc:id="ed3a65c6-094b-4faa-8b71-b8ee39a7f574" />
+		<os:retrieve doc:name="Retrieve Date Car Reservation" doc:id="21d3632e-e526-4493-90e0-ed56778d9f31" key="dateCarReservation" objectStore="Object_store" target="dateCarReservation">
+			<os:default-value ><![CDATA[2026-02-13 13:12:00]]></os:default-value>
+		</os:retrieve>
+		<flow-ref doc:name="get-vehicles-reservation-in-dealernet" doc:id="43bd8f17-5b27-41b2-80e2-db76ef95d460" name="get-vehicles-reservation-in-dealernet"/>
+		<ee:transform doc:name="Save Max Date" doc:id="1619e59e-1eda-4a0f-91a0-39ebb7aa9484" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="maxDate" ><![CDATA[%dw 2.0
+output application/json
+---
+max(payload.VeiculoReservaHistorico_Data)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Map Payload to Send Reservation Status" doc:id="c2373dbd-b411-4edb-aebc-d75e281b2557" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+var vPayload = payload map (value,index) -> {
+	"attributes": {
+		"type": "Asset"
+	},
+	"ExternalId__c": value.VeiculoReserva_Codigo,
+	"Status": if(value.VeiculoReserva_Status == "CAN") "Disponível" else "Reservado"
+}
+output application/json
+---
+{
+	allOrNone: false,
+	records: vPayload
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="send-vehicle-reservation-status-to-salesforce" doc:id="2bbe2f13-a70d-4fdf-b574-493a91468b6f" name="send-vehicle-reservation-status-to-salesforce"/>
+		<os:store doc:name="Store" doc:id="4a233bb1-032c-45aa-bdb7-a6d7d3f80bdb" key="dateCarReservation" objectStore="Object_store">
+			<os:value ><![CDATA[#[vars.maxDate]]]></os:value>
+		</os:store>
 		<error-handler ref="globalError_Router" />
 	</flow>
 </mule>

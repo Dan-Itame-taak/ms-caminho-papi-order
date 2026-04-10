@@ -183,6 +183,11 @@ output application/json
 		attributes: {
 			"type": "WorkOrder"
 		},
+		Asset: {
+			ExternalId__c: payload.codigoVeiculo
+		},
+		Type__c: mapAppointmentTypeReversed(payload.tipoAgendamento),
+		CurrentMileage__c: payload.km,
 		SchedulingExternalId__c: payload.codigoAgendamento,
 		Account: {
 			ExternalId__c: payload.codigoCliente
@@ -253,6 +258,8 @@ output application/json
     TmoCharges__c: payload.cobra,
     ExecutionSector__c: mapExecSec(payload.setorExecucao),
     Quantity: payload.quantidadeTMO,
+    Discount: payload.percDesconto,
+    DiscountValue__c: payload.valorDesconto,
     WorkOrder:{
     	SchedulingExternalId__c: payload.codigoAgendamento
     },
