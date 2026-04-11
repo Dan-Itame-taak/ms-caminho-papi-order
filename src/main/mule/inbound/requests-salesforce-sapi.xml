@@ -17,12 +17,11 @@ http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schem
 	<sub-flow name="send-employees-schedulling" doc:id="fb907e24-7bda-49df-aa7e-872a17fd1a24" >
 		<logger level="INFO" doc:name="Logger Before Request" doc:id="3edd3147-cea2-4f9e-ba37-31b98452fef2" message="Integration: send-employee-schedulling | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]" />
 		<salesforce-sapi:send-scheduling-request doc:name="Send Scheduling Request" doc:id="b6855bc3-6f1a-475d-9148-9b6a70c14db1" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" config-ref="Salesforce_sapi_Config"/>
-		<logger level="INFO" doc:name="Logger" doc:id="e201169b-1e28-4168-92e0-8444ba747b22" message="#[payload]"/>
 	</sub-flow>
 	<sub-flow name="send-os-status-to-salesforce" doc:id="d2087a5f-e451-4202-8611-2ee773eada77" >
 		<logger level="INFO" doc:name="Logger Before Request" doc:id="a9761644-c2ac-4a7e-af75-7668d793c129" message="Integration: send-os-status | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]"/>
 		<salesforce-sapi:create-service-order doc:name="Create service order" doc:id="032447b3-26ec-41b4-aa01-9b8818ba208e" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
-		<logger level="INFO" doc:name="Logger" doc:id="967fb139-80a8-4729-89d4-a169034e1021" />
+		<logger level="INFO" doc:name="Logger" doc:id="967fb139-80a8-4729-89d4-a169034e1021" message="#[payload]"/>
 	</sub-flow>
 	<sub-flow name="send-os-lineItems-to-salesforce" doc:id="f4637ef2-e2df-47ba-acc8-d3a5dcc7dd95" >
 		<logger level="INFO" doc:name="Logger Before Request" doc:id="7e2cab2a-9409-4d9d-8ce2-751e42544a7a" message="Integration: send-os-lineItems | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)]"/>
@@ -161,7 +160,7 @@ lineItems map (lineItem) -> {
     "OficinaServico_StatusDesconto": "PEN",
     "OficinaServico_StatusExecucao": "PEN",
     "OficinaServico_ExigeTesteVeiculo": lineItem.TmoRequiresTest__c,
-    "OficinaServico_DataPrevisao": (lineItem..StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
+    "OficinaServico_DataPrevisao": (lineItem.StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
     workOrderLineItemId: lineItem.Id,
     
 }]]></ee:set-variable>
@@ -842,5 +841,11 @@ orderItems map (item) -> {
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+	</sub-flow>
+	<sub-flow name="generic-composite-25-operations" doc:id="37540dba-570f-4348-9c71-8180f6e5a247" >
+		<logger level="INFO" doc:name="Logger Before Generic Composite" doc:id="0233f898-2b29-4ba7-b510-b7d7af67d68e" message="Integration: #[vars.integration] | CorrelationId: #[correlationId] | Query: #[vars.compositeRequest]"/>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="e490785f-2127-43ca-b4df-437888658cbc" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_id}">
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
 	</sub-flow>
 </mule>

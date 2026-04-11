@@ -120,3 +120,15 @@ fun mapExecSec(sector) = sector match {
 	case "OFC" -> "Oficina"
 	case "FEP" -> "Funilaria e Pintura"
 }
+
+fun mapProdStatus(stat) = stat match {
+	case "ABE" -> "AGE"
+	case "CAN" -> "CAN"
+	case "CON" -> "CON"
+	case "FIM" -> "FIN"
+	case "EAN" -> "CON"
+	case "ENC" -> "FIN"
+	case "PAR" -> "AGE"
+	case "PEN" -> "AGE"
+	case "FAT" -> "FIN"
+}

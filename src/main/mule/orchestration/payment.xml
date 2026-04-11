@@ -11,7 +11,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 	<flow name="send-payment-method-to-salesforce" doc:id="02c7e3e4-14ed-4ed6-b1f1-2440c010f420" initialState="stopped">
 		<scheduler doc:name="Scheduler" doc:id="9407c972-4115-4158-8b25-b6ad65ca4e04" >
 			<scheduling-strategy >
-				<fixed-frequency frequency="60" startDelay="1" timeUnit="MINUTES"/>
+				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
 		<logger level="INFO" doc:name="Logger Start Payment Method Flow" doc:id="a5abedbf-8bdd-441d-a6de-baf2199d08b3" message="Integration: payment-methods | Checkpoint: Start  | correlationId: #[correlationId]"/>

@@ -71,4 +71,93 @@ output application/json
 				</batch:job>
 		<error-handler ref="globalError_Router" />
 	</flow>
+	<sub-flow name="update-service-order-from-salesforce-to-dealernet-main" doc:id="f4696f0f-1a91-4455-ba11-7560595c038c" >
+		<ee:transform doc:name="Set Variables to Query Informations" doc:id="32c53b18-b4c1-4356-bc19-3c4bb1960f00" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT Id, Seller__r.ExternalId__c, ExternalId__c, StartDate__c, Status__c, Observation__c, Store__r.ExternalId__c, Type__c  FROM Scheduling__c WHERE WorkOrder__r.Id = '" ++ vars.osId ++ "' AND RecordType.Name = 'Consultor'",
+      "referenceId": "ConsultantSchedulingQuery"
+    },
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT Id, Seller__r.ExternalId__c, ExternalId__c, StartDate__c, Status__c, Observation__c, Store__r.ExternalId__c, Type__c, WorkOrderLineItem__r.ExternalId__c, WorkOrder__c, WorkOrderLineItem__r.Scheduling__r.StartDate__c, WorkOrderLineItem__r.Quantity, WorkOrderLineItem__r.UnitPrice, WorkOrderLineItem__r.Discount, WorkOrderLineItem__r.DiscountValue__c, WorkOrderLineItem__r.ExecutionSector__c, WorkOrderLineItem__r.Status, WorkOrderLineItem__r.WorkOrderType__r.ExternalId__c, WorkOrderLineItem__r.PricebookEntry.Product2.ExternalId__c, WorkOrderLineItem__r.Description FROM Scheduling__c WHERE WorkOrder__r.Id = '" ++ vars.osId ++ "' AND RecordType.Name = 'Produtivo'",
+      "referenceId": "ProductiveSchedulingQuery"
+    },
+    {
+	  "method": "GET",
+	  "url": "/services/data/v63.0/query?q=SELECT Id, Description, ExternalId__c, Scheduling__r.StartDate__c, Quantity, UnitPrice, Discount, DiscountValue__c, Duration, ExecutionSector__c, Status, WorkOrderType__r.ExternalId__c, PricebookEntry.Product2.ExternalId__c FROM WorkOrderLineItem WHERE WorkOrderId = '" ++ vars.osId ++ "'",
+	  "referenceId": "WorkOrderLineItemsQuery"
+	}
+  ]
+}]]></ee:set-variable>
+				<ee:set-variable variableName="integration" ><![CDATA[%dw 2.0
+output application/json
+---
+"update-service-order-from-salesforce-to-dealernet"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="generic-composite-25-operations" doc:id="899c34f6-74df-41ab-846e-de4a9c4c191e" name="generic-composite-25-operations"/>
+		<ee:transform doc:name="Payload Map - Agendamento and Servico" doc:id="6133df6e-9b4a-499d-bdca-edeac58862ce" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="consultPayload" ><![CDATA[%dw 2.0
+var consult = payload.compositeResponse.body[0].records[0]
+output application/json
+---
+{
+    Agendamento_Data: consult.StartDate__c[0 to 18],
+    Agendamento_Observacao: consult.Observation__c,
+    Agendamento_Status: consult.Status__c,
+    Agendamento_EmpresaCod: consult.Store__r,
+    Agendamento_Tipo: consult.Type__c
+}]]></ee:set-variable>
+				<ee:set-variable variableName="prodPayload" ><![CDATA[%dw 2.0
+var prod = payload.compositeResponse.body[1].records
+output application/json
+---
+prod map (value, index) -> {
+     OficinaServico_DescricaoProblemaSolucao: value.Description ,
+     Oficina_DataPrevisao: value.StartDate__c ,
+     OficinaServico_TMOCod: value.WorkOrderLineItem__r.PricebookEntry.Product2.ExternalId__c ,
+     OficinaServico_Qtde: value.WorkOrderLineItem__r.Quantity ,
+     OficinaServico_ValorUnitario: value.WorkOrderLineItem__r.UnitPrice ,
+     OficinaServico_PercDesconto: value.WorkOrderLineItem__r.Discount ,
+     OficinaServico_ValorDesconto: value.WorkOrderLineItem__r.DiscountValue__c ,
+     OficinaServico_Horas: value.WorkOrderLineItem__r.Duration ,
+     OficinaServico_AgendamentoCod: value.WorkOrder__r.SchedulingExternalId__c ,
+     OficinaServico_SetorExecucao: value.WorkOrderLineItem__r.ExecutionSector__c ,
+     OficinaServico_StatusAndamento: value.WorkOrderLineItem__r.Status ,
+     OficinaServico_TipoOSCod: value.WorkOrderLineItem__r.WorkOrderType__r.ExternalId__c ,
+     OficinaServico_UsuarioCodResponsavel: value.Seller__r.ExternalId__c
+}]]></ee:set-variable>
+				<ee:set-variable variableName="osId" ><![CDATA[%dw 2.0
+var consult = payload.compositeResponse.body[0].records[0]
+output application/json
+---
+consult.ExternalId__c]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Unify Payload" doc:id="284850d8-769c-4bbc-85b4-4dcab5640813" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"inputConsult": vars.consultPayload,
+	"inputProd": vars.prodPayload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="update-os-from-salesforce-to-dealernet" doc:id="1a9049e9-44c8-42d5-adc5-c86be6225f81" name="update-os-from-salesforce-to-dealernet"/>
+	</sub-flow>
 </mule>

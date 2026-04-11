@@ -101,7 +101,9 @@ output application/json
     attributes: {
       "type": "Order"
     },
-    Status: if(ord.Proposta_Status == "FAT") "Faturado" else null,
+    Status: if(ord.Proposta_Status == "FAT") "Faturado"
+    else if(ord.Proposta_Status == "CAN") "Cancelado"
+    else null,
     ExternalIdDealerNet__c: ord.K_Proposta_Codigo,
   }
 }
@@ -146,6 +148,18 @@ output application/json
 output application/json
 ---
 payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="update-os-from-salesforce-to-dealernet" doc:id="262d0809-d00a-4003-9e68-f0869cf75e4e" >
+		<logger level="INFO" doc:name="Logger" doc:id="13701f18-0203-4ab6-b3ec-72f2f482eadd" message="Integration: update-os-from-salesforce-to-dealernet | CorrelationId: #[correlationId] | OSID: #[vars.osId]" />
+		<dealernet-sapi:update-os doc:name="Update OS" doc:id="efce41a6-c781-4503-93b9-a76f04530563" config-ref="Dealernet_sapi_Config" os-id="#[vars.osId]" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<ee:transform doc:name="Response Payload" doc:id="ed8b3be0-0857-46f3-982f-4b3b4e3d3adc" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"Alterações realizadas com sucesso"]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</sub-flow>

@@ -189,6 +189,7 @@ output application/json
 		Type__c: mapAppointmentTypeReversed(payload.tipoAgendamento),
 		CurrentMileage__c: payload.km,
 		SchedulingExternalId__c: payload.codigoAgendamento,
+		Status: "Agendamento realizado",
 		Account: {
 			ExternalId__c: payload.codigoCliente
 		},
@@ -234,6 +235,19 @@ payload ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="For Each" doc:id="e0cdbf33-921d-49e9-b9b0-46983c097036" >
+			<ee:transform doc:name="Concat Tmo" doc:id="4d517be2-6369-48a2-bafa-cc1abdd3b675" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="TMOExternalId" ><![CDATA[%dw 2.0
+output application/json
+---
+if(!isBlank(payload.modeloVeiculoTmoTempo)) 
+(payload.codigoTMO ++ "_" ++ payload.modeloVeiculoTmoTempo)
+else 
+payload.codigoTMO]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
 			<ee:transform doc:name="Map Payload to Create OS Line Items" doc:id="6494c010-497a-4b5b-92f7-39183f61e7ab" >
 				<ee:message >
 				</ee:message>
@@ -249,8 +263,8 @@ output application/json
 	attributes: {
 		"type": "WorkOrderLineItem"
 	},
-    ExternalId__c: payload.TMOExternalId ++ "_" ++ payload.codigoIdServico,
-    DurationTime__c: payload.duracaoServico,
+    ExternalId__c: vars.TMOExternalId ++ "_" ++ payload.codigoIdServico,
+    DurationTime__c: (payload.duracaoServico/3600) as String,
     TmoExecutes__c: payload.executa,
     TmoRequiresTest__c: payload.exigeTesteVeiculo,
     TmoPrioritario__c: payload.prioritario,
@@ -260,6 +274,7 @@ output application/json
     Quantity: payload.quantidadeTMO,
     Discount: payload.percDesconto,
     DiscountValue__c: payload.valorDesconto,
+    Classification__c: payload.classificacaoTipoOs,
     WorkOrder:{
     	SchedulingExternalId__c: payload.codigoAgendamento
     },
@@ -268,7 +283,7 @@ output application/json
     },
     UnitPrice: payload.valorUnitario,
     PricebookEntry: {
-        ExternalId__c: "WorkOrderTMO" ++ "_" ++ payload.TMOExternalId
+        ExternalId__c: "WorkOrderTMO" ++ "_" ++ vars.TMOExternalId
     }
 } 
 	]
@@ -300,9 +315,15 @@ output application/json
 	records: payload
 }]]></ee:set-payload>
 							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="sellerCode" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.Seller__r.ExternalId__c]]></ee:set-variable>
+							</ee:variables>
 						</ee:transform>
 						<flow-ref doc:name="send-employees-schedulling" doc:id="a8fd60b9-168b-4173-bfac-58cfa5a8c386" name="send-employees-schedulling"/>
-						<logger level="INFO" doc:name="Logger" doc:id="d32feb76-6b65-49d2-b09e-d8605cf87267" message="#[payload]"/>
+						<logger level="INFO" doc:name="Logger" doc:id="d32feb76-6b65-49d2-b09e-d8605cf87267" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idFuncionario: vars.sellerCode[(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idFuncionario: vars.sellerCode[(index)],&#10;    description: value.errors[0].message&#10;}]"/>
 					</batch:aggregator>
 				</batch:step>
 			</batch:process-records>
