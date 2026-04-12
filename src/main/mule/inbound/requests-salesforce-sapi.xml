@@ -160,7 +160,7 @@ lineItems map (lineItem) -> {
     "OficinaServico_StatusDesconto": "PEN",
     "OficinaServico_StatusExecucao": "PEN",
     "OficinaServico_ExigeTesteVeiculo": lineItem.TmoRequiresTest__c,
-    "OficinaServico_DataPrevisao": (lineItem.StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
+    "OficinaServico_DataPrevisao": (productiveScheduling.StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
     workOrderLineItemId: lineItem.Id,
     
 }]]></ee:set-variable>
