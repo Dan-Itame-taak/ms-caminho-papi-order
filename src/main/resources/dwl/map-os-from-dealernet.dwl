@@ -7,7 +7,7 @@ var finalMap = pluckedPayload map ((value, index) -> {
         "type": "WorkOrder"
     },
     ExternalId__c: value.numeroOs,
-    SchedulingExternalId__c: payload.codigoAgendamento,
+    SchedulingExternalId__c: value.codigoAgendamento,
     Store__r: {
         ExternalId__c: mapStore(value.nomeEmpresa)
     },
