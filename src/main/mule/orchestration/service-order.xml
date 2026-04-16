@@ -8,11 +8,22 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 	<flow name="send-service-order-to-salesforce" doc:id="f7c413f7-4bd0-4c74-8c47-74c24d74c41f">
 		<scheduler doc:name="Scheduler" doc:id="42d69755-8d50-4f0e-ae69-2c9f624e26a0" >
 			<scheduling-strategy >
-				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>
+				<cron expression="0 0/15 * * * ?" timeZone="America/Sao_Paulo" />
 			</scheduling-strategy>
 		</scheduler>
+		<flow-ref doc:name="send-employees-scheduled-agenda-to-salesforce" doc:id="2eb0852c-c19a-4da1-8add-6809e980d603" name="send-employees-scheduled-agenda-to-salesforce"/>
 		<flow-ref doc:name="get-service-order-status" doc:id="f0ae9869-6688-4bb6-9134-de12e5e28663" name="get-service-order-status"/>
 		<logger level="INFO" doc:name="Logger" doc:id="08b5eaf4-e361-4d4e-b529-3cd97773cccc" />
+		<ee:transform doc:name="Store Payload" doc:id="5f53fa32-2146-4540-babc-06b00b1da77f" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="vPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
 		<batch:job jobName="OS_Batch_Job" doc:id="eaaf7c8b-fbba-4270-93dd-1f8c5b823f05" blockSize="1000" maxFailedRecords="-1" maxConcurrency="1">
 			<batch:process-records>
 				<batch:step name="Batch_Step" doc:id="a472a047-012b-447e-ac94-91e977516426">
@@ -23,26 +34,56 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 							<ee:set-payload resource="dwl/map-os-from-dealernet.dwl" />
 						</ee:message>
 				</ee:transform>
-								<flow-ref doc:name="send-os-status-to-salesforce" doc:id="3e9fb230-1ccf-47c7-a378-9c5d87e7575e" name="send-os-status-to-salesforce" />
+								<ee:transform doc:name="Store idOs" doc:id="0c2a6352-e7c5-4848-bfc0-804c393a1980" >
+							<ee:message >
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="idOs" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.records.ExternalId__c]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<flow-ref doc:name="send-os-status-to-salesforce" doc:id="3e9fb230-1ccf-47c7-a378-9c5d87e7575e" name="send-os-status-to-salesforce" />
+						<logger level="INFO" doc:name="Logger After OS Status" doc:id="ca67f750-bc35-4eac-8e16-2f840241d5c0" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idOS: vars.idOs[(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idOS: vars.idOs[(index)],&#10;    description: value.errors[0].message&#10;}]"/>
 							</batch:aggregator>
 						</batch:step>
-					</batch:process-records>
-				</batch:job>
-		<batch:job jobName="LineItems_Batch_Job" doc:id="ff913f09-2fe6-4560-bd2e-ed0cf7e22623" blockSize="1000" maxFailedRecords="-1">
-					<batch:process-records>
 				<batch:step name="Map_OS_LineItems_ServiceBatch_Step" doc:id="f6adf0fd-76ee-438c-b698-e04ed7b7f030">
 							<batch:aggregator doc:name="Batch Aggregator" doc:id="79696f58-0cd1-4d5a-af28-0c99d2322b63" size="200" preserveMimeTypes="true">
 								<logger level="INFO" doc:name="Logger Line Items Service Batch" doc:id="3c89ac9c-0eb0-4968-903b-e59428099606" message="Integration: send-service-order-to-salesforce | Before Send Line Items Service Batch | payload model : #[payload[0]]" />
 						<ee:transform doc:name="Map Payload to Line Items - Service" doc:id="738c98ff-7f28-4a94-b88d-ab673ae813f8">
 					<ee:message>
+								<ee:set-payload resource="dwl/map-os-lineItems-service.dwl" />
 						</ee:message>
 									<ee:variables>
-										<ee:set-variable resource="dwl/map-os-lineItems-service.dwl" variableName="vPayload" />
 									</ee:variables>
 				</ee:transform>
-								<flow-ref doc:name="send-os-lineItems-to-salesforce" doc:id="e012ccf2-5bbc-4e0d-8720-a11dabd8dbee" name="send-os-lineItems-to-salesforce" />
+								<ee:transform doc:name="Store idLineItems" doc:id="81a7b342-f3b4-4022-a794-8c36f5c26045" >
+							<ee:message >
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="idLineItems" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.records.ExternalId__c]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<flow-ref doc:name="send-os-lineItems-to-salesforce" doc:id="e012ccf2-5bbc-4e0d-8720-a11dabd8dbee" name="send-os-lineItems-to-salesforce" />
+						<logger level="INFO" doc:name="Logger After Id Line Items" doc:id="1ffaca0a-4adc-4cfe-b21c-c1f8afb13c1f" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idLineItem: vars.idLineItems[(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idLineItem: vars.idLineItems[(index)],&#10;    description: value.errors[0].message&#10;}]"/>
 							</batch:aggregator>
 						</batch:step>
+					</batch:process-records>
+				</batch:job>
+		<ee:transform doc:name="Response Payload" doc:id="61c9a853-c5b7-4a3d-817b-03650e5f37af" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<!-- [STUDIO:"LineItems_Batch_Job"]<batch:job jobName="LineItems_Batch_Job" doc:id="ff913f09-2fe6-4560-bd2e-ed0cf7e22623" blockSize="1000" maxFailedRecords="-1" maxConcurrency="1">
+					<batch:process-records>
 						<batch:step name="Map_OS_LineItems_PartsBatch_Step" doc:id="f8e3ef1c-f4d4-481b-9d7b-43c8131b749d">
 							<ee:transform doc:name="Map Payload to Line Items - Parts" doc:id="3ae87098-9b3f-4fa1-b02c-a473cebbdc1a">
 					<ee:message>
@@ -52,23 +93,23 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 								</ee:variables>
 				</ee:transform>
 							<batch:aggregator doc:name="Batch Aggregator" doc:id="ddd10683-edb4-4209-8655-5695470b0b21" size="200" preserveMimeTypes="true">
-								<logger level="INFO" doc:name="Logger Line Items Parts Batch" doc:id="3c09d41f-623c-4df4-9612-18e75d6e52de" message="Integration: send-service-order-to-salesforce | Before Send Line Items Parts Batch | payload model : #[payload[0]]" />
+								<logger level="INFO" doc:name="Logger Line Items Parts Batch" doc:id="3c09d41f-623c-4df4-9612-18e75d6e52de" message="Integration: send-service-order-to-salesforce | Before Send Line Items Parts Batch | payload model : #[payload[0&#93;&#93;" />
 						<ee:transform doc:name="Aggregate Payload" doc:id="6a0e9e54-8d63-4f2c-a2a7-3acc165ae1df">
 									<ee:message>
 										<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {
 	allOrNone: false,
 	records: payload
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
 									</ee:message>
 								</ee:transform>
 								<flow-ref doc:name="send-os-lineItems-to-salesforce" doc:id="aef1c9bc-6d5e-43fb-ad99-a8a2a13299e7" name="send-os-lineItems-to-salesforce" />
 							</batch:aggregator>
 						</batch:step>
 					</batch:process-records>
-				</batch:job>
+				</batch:job> [STUDIO] -->
 		<error-handler ref="globalError_Router" />
 	</flow>
 	<sub-flow name="update-service-order-from-salesforce-to-dealernet-main" doc:id="f4696f0f-1a91-4455-ba11-7560595c038c" >

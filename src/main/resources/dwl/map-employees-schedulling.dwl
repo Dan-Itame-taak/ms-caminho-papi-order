@@ -38,7 +38,13 @@ else
     EndDate__c: ((payload.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String + duration({ minutes: (payload.duracaoServico/60)}))[0 to 18]
 ,
     RecordTypeId: vars.rTypeCons,
-    WorkOrder__r:{SchedulingExternalId__c: payload.codigoAgendamento},
-    WorkOrderLineItem__r: {ExternalId__c: TMOExternalId ++ "_" ++ payload.codigoIdServico
+    WorkOrder__r: if(!isBlank(payload.codigoAgendamento)) {
+    	SchedulingExternalId__c: payload.codigoAgendamento
+    } 
+    else
+    {
+    	ExternalId__c: payload.codigoOS
+    },
+    WorkOrderLineItem__r: {ExternalId__c: payload.codigoIdServico //vars.TMOExternalId ++ "_" ++ '
     }
 }

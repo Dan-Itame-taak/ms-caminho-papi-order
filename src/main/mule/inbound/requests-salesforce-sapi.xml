@@ -21,12 +21,10 @@ http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schem
 	<sub-flow name="send-os-status-to-salesforce" doc:id="d2087a5f-e451-4202-8611-2ee773eada77" >
 		<logger level="INFO" doc:name="Logger Before Request" doc:id="a9761644-c2ac-4a7e-af75-7668d793c129" message="Integration: send-os-status | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)] | PayloadModel: #[payload.records[0]]"/>
 		<salesforce-sapi:create-service-order doc:name="Create service order" doc:id="032447b3-26ec-41b4-aa01-9b8818ba208e" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
-		<logger level="INFO" doc:name="Logger" doc:id="967fb139-80a8-4729-89d4-a169034e1021" message="#[payload]"/>
 	</sub-flow>
 	<sub-flow name="send-os-lineItems-to-salesforce" doc:id="f4637ef2-e2df-47ba-acc8-d3a5dcc7dd95" >
 		<logger level="INFO" doc:name="Logger Before Request" doc:id="7e2cab2a-9409-4d9d-8ce2-751e42544a7a" message="Integration: send-os-lineItems | correlationId: #[correlationId] | payloadSize: #[sizeOf(payload.records)] | PayloadModel: #[payload.records[0]]"/>
 		<salesforce-sapi:send-service-order-line-items doc:name="Send Service Order Line Items" doc:id="3685f12b-b448-42fa-a788-3d48378fc2c1" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" config-ref="Salesforce_sapi_Config">
-			<salesforce-sapi:send-service-order-line-items-request-data ><![CDATA[#[vars.vPayload]]]></salesforce-sapi:send-service-order-line-items-request-data>
 		</salesforce-sapi:send-service-order-line-items>
 		<logger level="INFO" doc:name="Logger" doc:id="ec626990-f371-4d50-8eea-6f108776bb0f" message="#[payload]"/>
 	</sub-flow>
@@ -83,7 +81,7 @@ var scheduling = payload.compositeResponse.body[1].records[0]
     "codigoCliente": workOrder.Account.ExternalId__c,
     "codigoVeiculo": workOrder.Asset.ExternalId__c,
 //    "horarioChegada": workOrder.Store__r.DealerNetExternalId__c,
-    "observacao": workOrder.Description,
+    "observacao": scheduling.Observation__c,
     "tipo": mapAppointmentType(workOrder.Type__c),//if(workOrder.Type__c == "Ativo") true else false,
     "status": scheduling.Status__c,
 //    "codigoAtendimento": workOrder.Store__r.DealerNetExternalId__c,
@@ -131,24 +129,24 @@ output application/json
 
 var lineItems = payload.compositeResponse.body[3].records default []
 
-var productiveScheduling = payload.compositeResponse.body[2].records[0]
+var productiveScheduling = payload.compositeResponse.body[2].records
 
-var codResponsavel = productiveScheduling.Seller__r.ExternalId__c splitBy ("_")
+
 
 var agendamentoCod = vars.consultantResponse.GENERATED_KEYS
 ---
-lineItems map (lineItem) -> {
+lineItems map (lineItem, index) -> {
     //"OficinaServico_OSCod": lineItem.WorkOrderId, --> validar com o Andrei, se em algum momento vai ser necessário criar a OS no Dealer
     "OficinaServico_AgendamentoCod": agendamentoCod,
     "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
     "OficinaServico_TMOCod": if (lineItem.Product2.ExternalId__c contains "_") (lineItem.Product2.ExternalId__c splitBy  "_")[0] else lineItem.Product2.ExternalId__c, //Obrigatório
     "OficinaServico_Qtde": lineItem.Quantity,
-    "OficinaServico_Horas": lineItem.DurationTime__c,
+    "OficinaServico_Horas": lineItem.DurationTime__c * 3600,
     "OficinaServico_ValorUnitario": lineItem.TotalPrice,
     "OficinaServico_PercDesconto": lineItem.Discount,
     "OficinaServico_CobrarCliente": lineItem.TmoCharges__c,
     "OficinaServico_ExecutarOficina": lineItem.TmoExecutes__c,
-    "OficinaServico_UsuarioCodResponsavel": codResponsavel[1], //Mandar sem o produtivo_
+    "OficinaServico_UsuarioCodResponsavel": (productiveScheduling[(index)].Seller__r.ExternalId__c splitBy ("_"))[1], //Mandar sem o produtivo_
     "OficinaServico_SetorExecucao": "OFC",//lineItem.ExecutionSector__c, //Precisa ser OFC para o caso de Oficina. Precisa pegar o mapping do Dealer.
     
     "OficinaServico_DescricaoProblemaSolucao": productiveScheduling.Description default "Teste", //Colocar como Obrigatório
@@ -160,7 +158,7 @@ lineItems map (lineItem) -> {
     "OficinaServico_StatusDesconto": "PEN",
     "OficinaServico_StatusExecucao": "PEN",
     "OficinaServico_ExigeTesteVeiculo": lineItem.TmoRequiresTest__c,
-    "OficinaServico_DataPrevisao": (productiveScheduling.StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
+    "OficinaServico_DataPrevisao": (productiveScheduling[(index)].StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
     workOrderLineItemId: lineItem.Id,
     
 }]]></ee:set-variable>

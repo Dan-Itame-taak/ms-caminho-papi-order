@@ -53,11 +53,13 @@ payload]]></ee:set-payload>
 		<tracing:with-correlation-id doc:name="With CorrelationID" doc:id="d156474b-2ce6-40c3-986a-38cb3503ac9b" correlationId="#[correlationId]">
 			<dealernet-sapi:get-invoices doc:name="Get Invoices" doc:id="c8d31c10-76be-4617-b887-5c92e38bfb40" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
 		</tracing:with-correlation-id>
-		<ee:transform doc:name="invoice body request to Salesforce" doc:id="942ffcc5-d15f-44d8-a082-86e38b63529c">
+		<choice doc:name="Choice" doc:id="dfd52eef-7002-4b85-b107-2e632f021f71" >
+			<when expression="#[sizeOf(payload) != 0]">
+				<ee:transform doc:name="invoice body request to Salesforce" doc:id="942ffcc5-d15f-44d8-a082-86e38b63529c">
 			<ee:message>
 			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="invoiceRequest" ><![CDATA[%dw 2.0
+			<ee:variables>
+				<ee:set-variable variableName="invoiceRequest"><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -93,7 +95,7 @@ output application/json
   }
 }
 ]]></ee:set-variable>
-				<ee:set-variable variableName="orderRequest" ><![CDATA[%dw 2.0
+				<ee:set-variable variableName="orderRequest"><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -110,10 +112,10 @@ output application/json
 ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<foreach doc:name="For Each" doc:id="b217ecc1-86c3-42ca-9af1-49a039042e16" collection="#[vars.invoiceRequest]" batchSize="200">
-			<ee:transform doc:name="composite body request" doc:id="9174f92c-df46-4397-ac1d-a6531e98611a" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
+				<foreach doc:name="For Each" doc:id="b217ecc1-86c3-42ca-9af1-49a039042e16" collection="#[vars.invoiceRequest]" batchSize="200">
+			<ee:transform doc:name="composite body request" doc:id="9174f92c-df46-4397-ac1d-a6531e98611a">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -122,12 +124,12 @@ output application/json
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<salesforce-sapi:send-invoices-to-salesforce doc:name="Send Invoices to Salesforce" doc:id="06cab923-b331-451f-8ce2-4ca96da475d4" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+			<salesforce-sapi:send-invoices-to-salesforce doc:name="Send Invoices to Salesforce" doc:id="06cab923-b331-451f-8ce2-4ca96da475d4" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" />
 		</foreach>
-		<foreach doc:name="For Each" doc:id="fc5e2a42-d3a1-48c8-aa44-749321f06f9b" collection="vars.orderRequest" batchSize="200">
-			<ee:transform doc:name="composite body request" doc:id="575139f3-763c-423e-af48-0ba22c940fe3" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
+				<foreach doc:name="For Each" doc:id="fc5e2a42-d3a1-48c8-aa44-749321f06f9b" collection="vars.orderRequest" batchSize="200">
+			<ee:transform doc:name="composite body request" doc:id="575139f3-763c-423e-af48-0ba22c940fe3">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -136,8 +138,13 @@ output application/json
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<salesforce-sapi:update-proposal-to-salesforce doc:name="Update Proposal to Salesforce" doc:id="b5531463-f13c-49ea-90d3-8dd21ff13985" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+			<salesforce-sapi:update-proposal-to-salesforce doc:name="Update Proposal to Salesforce" doc:id="b5531463-f13c-49ea-90d3-8dd21ff13985" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" />
 		</foreach>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger No Invoices" doc:id="b8e498b3-3b46-48dc-91c1-5fdc12f2ff16" message="Nenhuma nota fiscal dentro dos parâmetros foi encontrada"/>
+			</otherwise>
+		</choice>
 	</flow>
 	<sub-flow name="get-vehicles-reservation-in-dealernet" doc:id="9aa8aee2-d812-4169-8980-23ec5e514079" >
 		<logger level="INFO" doc:name="Logger" doc:id="3d7d977e-84aa-437b-87d2-b715b4e0cac7" message="Integration: #[vars.integration] | CorrelationId: #[correlationId] | Date: #[vars.dateCarReservation]  "/>

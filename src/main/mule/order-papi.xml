@@ -3,7 +3,7 @@
     <http:listener-config name="order-papi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
-    <apikit:config name="order-papi-config" api="resource::3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4:order-papi:1.0.5:raml:zip:order-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="order-papi-config" api="resource::3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4:order-papi:1.0.6:raml:zip:order-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <flow name="order-papi-main">
         <http:listener config-ref="order-papi-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
@@ -89,6 +89,10 @@ output application/json
                 <ee:set-variable variableName="osId">attributes.uriParams.'osId'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-		<flow-ref doc:name="update-service-order-from-salesforce-to-dealernet-main" doc:id="83b23c21-1462-453d-896a-6b2df0d752b8" name="update-service-order-from-salesforce-to-dealernet-main"/>
+        <flow-ref doc:name="update-service-order-from-salesforce-to-dealernet-main" doc:id="83b23c21-1462-453d-896a-6b2df0d752b8" name="update-service-order-from-salesforce-to-dealernet-main" />
+    </flow>
+    <flow name="get:\employees\scheduled:order-papi-config">
+        <logger level="INFO" message="Integration: Manual-Trigger-Scheduling-from-DealerNet-to-Salesforce | CorrelationId: #[correlationId]" />
+		<flow-ref doc:name="send-service-order-to-salesforce" doc:id="823cf4e5-0f9e-44f5-87fb-2472c32d2f33" name="send-service-order-to-salesforce"/>
     </flow>
 </mule>

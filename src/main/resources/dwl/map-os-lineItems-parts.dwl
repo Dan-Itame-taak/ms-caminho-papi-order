@@ -7,10 +7,10 @@ output application/json
     },
     ExternalId__c: payload.codigoPeca ++ "_" 
     ++ payload.codigoServico ++ "_" 
-    ++ payload.numeroOs,
+    ++ payload.codigoOS,
     ParentWorkOrderLineItem: {
         ExternalId__c: payload.codigoServico ++ "_" 
-    ++ payload.numeroOs
+    ++ payload.codigoOS
     },
     PricebokEntry: {
     	ExternalId__c: "posvenda_" ++ value.codigoEmpresa

@@ -36,11 +36,11 @@ fun mapAppointmentType(code) = code match {
 	case "Internet" -> "I" 
 	case  "Receptivo" -> "R"
 	case "Presencial" -> "P"
-	case "Atendido" -> "A"
+	case "Atendido" -> "T"
 	case "Complemento" -> "C"
 	case "Em pedido" -> "E"
-	case "On Star" -> "T"
-	case "Ativo" -> "1"
+	case "On Star" -> "O"
+	case "Ativo" -> "A"
 }
 
 fun mapAppointmentTypeReversed(code) = code match {
@@ -132,3 +132,18 @@ fun mapProdStatus(stat) = stat match {
 	case "PEN" -> "AGE"
 	case "FAT" -> "FIN"
 }
+
+fun mapPrismCollor(code) = code match {
+	case "1" -> "Azul"
+	case "2" -> "Amarelo"
+	case "3" -> "Vermeho"
+	case "4" -> "Laranja"
+	case "5" -> "Verde"
+	case "6" -> "Preto"
+	
+}
+
+fun mapPercComb(perc)= if(perc < 50) "1/4"
+else if (perc > 49 and perc < 75) "1/2"
+else if (perc > 74 and perc < 100) "1/3"
+else "1"
