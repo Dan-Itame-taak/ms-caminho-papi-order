@@ -137,9 +137,10 @@ payload]]></ee:set-payload>
 		<ee:transform doc:name="Payload Response" doc:id="6fe47967-d1bb-4dcc-afca-f5fa5423c407" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::Runtime
 output application/json
 ---
-payload]]></ee:set-payload>
+payload  ]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>

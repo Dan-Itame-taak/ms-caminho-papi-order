@@ -8,7 +8,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd
 http://www.mulesoft.org/schema/mule/fandi-sapi http://www.mulesoft.org/schema/mule/fandi-sapi/current/mule-fandi-sapi.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-	<flow name="send-payment-method-to-salesforce" doc:id="02c7e3e4-14ed-4ed6-b1f1-2440c010f420" initialState="stopped">
+	<flow name="send-payment-method-to-salesforce" doc:id="02c7e3e4-14ed-4ed6-b1f1-2440c010f420">
 		<scheduler doc:name="Scheduler" doc:id="9407c972-4115-4158-8b25-b6ad65ca4e04" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>

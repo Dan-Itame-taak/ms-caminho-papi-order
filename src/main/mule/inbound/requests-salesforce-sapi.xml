@@ -72,6 +72,7 @@ var workOrder = payload.compositeResponse.body[0].records[0]
 var scheduling = payload.compositeResponse.body[1].records[0]
 ---
 {
+	"codigoAgendamento": scheduling.ExternalId__c,
     "codigoEmpresa": workOrder.Store__r.DealerNetExternalId__c,
     "codigoConsultor": (scheduling.Seller__r.ExternalId__c splitBy("_"))[1], //workOrder.Owner.DealerNetCode__c,
     "dataAgendamento": (scheduling.StartDate__c[0 to 18] as DateTime >> "America/Sao_Paulo")[0 to 18],
@@ -117,9 +118,28 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 			</ee:variables>
 		</ee:transform>
 		<logger level="INFO" doc:name="Logger After Map Register Service" doc:id="ddbd6f1e-00d3-4bb7-bf92-dcc6918d83e9" message="Integration: send-register-service-to-dealernet | correlationId: #[correlationId] | payload: #[vars.consultantRequest]"/>
-		<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse">
-			<dealernet-sapi:create-register-service-request-data ><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:create-register-service-request-data>
+		<choice doc:name="Choice" doc:id="415e7bc6-84f9-456c-b2f1-95be4fc01c06" >
+			<when expression="#[vars.consultantRequest.codigoAgendamento == null]">
+				<dealernet-sapi:create-register-service doc:name="Create register service" doc:id="7e38625e-9b49-4441-bd14-9948591fd6ba" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse">
+			<dealernet-sapi:create-register-service-request-data><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:create-register-service-request-data>
 		</dealernet-sapi:create-register-service>
+			</when>
+			<otherwise >
+				<dealernet-sapi:update-register-services doc:name="Update register services" doc:id="db03c00b-7d95-4fbf-9e2c-beee92a6f138" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse"/>
+				<ee:transform doc:name="Mock Generated Keys - Register Service" doc:id="efb3b29b-52f7-48af-8810-a1ce6fd0d5c9" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="consultantResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	GENERATED_KEYS: vars.consultantRequest.codigoAgendamento
+}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
 		<ee:transform doc:name="Productive appointment Payload sended to Dealernet" doc:id="8151a1fd-3fc3-4c4c-80ea-399491cea289" >
 			<ee:message >
 			</ee:message>
@@ -137,6 +157,7 @@ var agendamentoCod = vars.consultantResponse.GENERATED_KEYS
 ---
 lineItems map (lineItem, index) -> {
     //"OficinaServico_OSCod": lineItem.WorkOrderId, --> validar com o Andrei, se em algum momento vai ser necessário criar a OS no Dealer
+    "OficinaServico_Codigo": lineItem.ExternalId__c,
     "OficinaServico_AgendamentoCod": agendamentoCod,
     "OficinaServico_TipoOSCod": lineItem.WorkOrderType__r.ExternalId__c,
     "OficinaServico_TMOCod": if (lineItem.Product2.ExternalId__c contains "_") (lineItem.Product2.ExternalId__c splitBy  "_")[0] else lineItem.Product2.ExternalId__c, //Obrigatório
@@ -165,8 +186,27 @@ lineItems map (lineItem, index) -> {
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="Iterate Productive Request " doc:id="06f3c0c1-62d6-4097-b41d-21e18d6fd28e" collection="#[vars.productiveRequest]">
-			<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveResponse">
+			<choice doc:name="Choice" doc:id="f43293dc-bd65-4030-8766-237ef1d2da25" >
+				<when expression="#[payload.OficinaServico_Codigo == null]">
+					<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveResponse">
 		</dealernet-sapi:create-service-order>
+				</when>
+				<otherwise>
+					<dealernet-sapi:update-os doc:name="Update OS" doc:id="7a485a36-8983-4cbf-9867-4d575d4be391" os-id="#[vars.workOrderId]" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveResponse"/>
+					<ee:transform doc:name="Mock Generated Keys - OS" doc:id="dcccd3b2-2ffe-442d-ab8f-a3c6873f2cf4" >
+						<ee:message >
+						</ee:message>
+						<ee:variables >
+							<ee:set-variable variableName="productiveResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	GENERATED_KEYS: payload.OficinaServico_Codigo
+}]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</otherwise>
+			</choice>
 			<ee:transform doc:name="Aggregate Productive Response Code" doc:id="795c80b1-0e64-49f5-a959-5bf5b7bc13c8" >
 				<ee:message >
 				</ee:message>
@@ -178,8 +218,40 @@ vars.aggregateProductiveResponses ++ [{
     "workOrderLineItemId": payload.workOrderLineItemId,
     "dealerKey": vars.productiveResponse.GENERATED_KEYS
 }]]]></ee:set-variable>
+					<ee:set-variable variableName="productiveEndDate" ><![CDATA[%dw 2.0
+var data = ((payload.OficinaServico_DataPrevisao replace " " with ("T"))[0 to 18] as DateTime)
+import * from dw::core::Periods
+output application/json
+---
+{
+	"OficinaServico_Codigo": vars.productiveResponse.GENERATED_KEYS,
+	"OficinaServicoMarcacao_DataInicio": payload.OficinaServico_DataPrevisao,
+	"OficinaServicoMarcacao_DataFim": ((data + duration({minutes: payload.OficinaServico_Horas/60}) as String) [0 to 18]) replace "T" with (" ")
+}]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
+			<choice doc:name="Choice" doc:id="ce529de9-1ecd-46f6-90b7-408f9d276b24" >
+				<when expression="#[payload.OficinaServico_Codigo == null]">
+					<dealernet-sapi:send-service-order-end-date doc:name="Send Service Order End Date" doc:id="535b318c-9289-4fb5-94b2-f31bc03bc0d3" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="OSEndDate">
+				<dealernet-sapi:send-service-order-end-date-request-data><![CDATA[#[vars.productiveEndDate]]]></dealernet-sapi:send-service-order-end-date-request-data>
+			</dealernet-sapi:send-service-order-end-date>
+				</when>
+				<otherwise >
+					<ee:transform doc:name="Payload to Update" doc:id="b0964a76-79f2-4729-aac6-f75a83646cbf">
+							<ee:message>
+							</ee:message>
+							<ee:variables>
+								<ee:set-variable variableName="productiveEndDate"><![CDATA[%dw 2.0
+output application/json
+---
+vars.productiveEndDate ++ {operacao: "Atualizar"}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+					<dealernet-sapi:send-service-order-end-date doc:name="Send Service Order End Date" doc:id="e7da92c3-e96f-4710-b12e-260bc1a20f78" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="OSEndDate">
+							<dealernet-sapi:send-service-order-end-date-request-data><![CDATA[#[vars.productiveEndDate]]]></dealernet-sapi:send-service-order-end-date-request-data>
+						</dealernet-sapi:send-service-order-end-date>
+				</otherwise>
+			</choice>
 		</foreach>
 		<ee:transform doc:name="Build Final Response" doc:id="11009fb7-f40c-4c92-8bb8-de0b2e11bd40" >
 			<ee:message >
