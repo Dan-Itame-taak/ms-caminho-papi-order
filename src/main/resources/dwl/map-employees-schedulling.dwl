@@ -34,8 +34,8 @@ else
     },
     Name: "Agendamento " ++ (payload.horaAgendadaProdutivo)[0 to 18] as DateTime as String {format: 'dd/MM/yyyy HH:mm:SS'} default "",
     Status__c: mapProdStatus(payload.statusAgendamento),
-    StartDate__c: (payload.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String,
-    EndDate__c: ((payload.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String + duration({ minutes: (payload.duracaoServico/60)}))[0 to 18]
+    (StartDate__c: (payload.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String) if !isBlank(payload.horaAgendadaProdutivo),
+    (EndDate__c: ((payload.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String + duration({ minutes: (payload.duracaoServico/60)}))[0 to 18]) if !isBlank(payload.horaAgendadaProdutivo)
 ,
     RecordTypeId: vars.rTypeCons,
     WorkOrder__r: if(!isBlank(payload.codigoAgendamento)) {

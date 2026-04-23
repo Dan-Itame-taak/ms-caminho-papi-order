@@ -1,0 +1,11 @@
+salesforce-sapi:
+  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]" 
+  client_secret: "![HtZIik6eahnhfvV3EaBTNvviS4gBoZUAvDBjEFE9JzwbKEr/MFuEMA==]"
+
+dealernet-sapi:
+  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]" 
+  client_secret: "![HtZIik6eahnhfvV3EaBTNvviS4gBoZUAvDBjEFE9JzwbKEr/MFuEMA==]"
+  
+fandi-sapi:
+  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]" 
+  client_secret: "![HtZIik6eahnhfvV3EaBTNvviS4gBoZUAvDBjEFE9JzwbKEr/MFuEMA==]"

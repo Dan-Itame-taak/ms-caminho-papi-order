@@ -100,7 +100,11 @@ vars.arrayAnalysis ++ [{
     InstallmentAmount__c: payload.OperacaoParceiro.RetornoValor,
     InstallmentQuantity__c: payload.OperacaoParceiro.QtdParcelas,
     FinancingBank__c: payload.OperacaoParceiro.FinanceiraNome,
-    Status__c: if (payload.OperacaoParceiro.OperacaoSituacao == "APROVADA") "Aprovado" else payload.OperacaoParceiro.OperacaoSituacao
+    Status__c: if (payload.OperacaoParceiro.OperacaoSituacao == "APROVADA") "Aprovado" 
+    else if(payload.OperacaoParceiro.OperacaoSituacao == "REANÁLISE") "Reanálise"
+    else if(payload.OperacaoParceiro.OperacaoSituacao == "REJEITADA") "Rejeitado"
+    else if(payload.OperacaoParceiro.OperacaoSituacao == "EM ANÁLISE") "Em Analise"
+    else payload.OperacaoParceiro.OperacaoSituacao
 }]]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
