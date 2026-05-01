@@ -125,7 +125,9 @@ var scheduling = payload.compositeResponse.body[1].records[0]
 		</dealernet-sapi:create-register-service>
 			</when>
 			<otherwise >
-				<dealernet-sapi:update-register-services doc:name="Update register services" doc:id="db03c00b-7d95-4fbf-9e2c-beee92a6f138" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse"/>
+				<dealernet-sapi:update-register-services doc:name="Update register services" doc:id="db03c00b-7d95-4fbf-9e2c-beee92a6f138" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantResponse">
+					<dealernet-sapi:update-register-services-request-data ><![CDATA[#[vars.consultantRequest]]]></dealernet-sapi:update-register-services-request-data>
+				</dealernet-sapi:update-register-services>
 				<ee:transform doc:name="Mock Generated Keys - Register Service" doc:id="efb3b29b-52f7-48af-8810-a1ce6fd0d5c9" >
 					<ee:message >
 					</ee:message>

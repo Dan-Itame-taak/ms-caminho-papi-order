@@ -81,13 +81,6 @@
 		</dependency>
 		<dependency>
 			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
-			<artifactId>order-papi</artifactId>
-			<version>1.0.6</version>
-			<classifier>raml</classifier>
-			<type>zip</type>
-		</dependency>
-		<dependency>
-			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
 			<artifactId>mule-plugin-salesforce-sapi</artifactId>
 			<version>1.0.29</version>
 			<classifier>mule-plugin</classifier>
@@ -97,6 +90,13 @@
 			<artifactId>mule-plugin-dealernet-sapi</artifactId>
 			<version>1.0.28</version>
 			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4</groupId>
+			<artifactId>order-papi</artifactId>
+			<version>1.0.7</version>
+			<classifier>raml</classifier>
+			<type>zip</type>
 		</dependency>
 	</dependencies>
 

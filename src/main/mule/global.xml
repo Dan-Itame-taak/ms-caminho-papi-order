@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:fandi-sapi="http://www.mulesoft.org/schema/mule/fandi-sapi" xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:order-papi="http://www.mulesoft.org/schema/mule/order-papi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:dealernet-sapi="http://www.mulesoft.org/schema/mule/dealernet-sapi"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:fandi-sapi="http://www.mulesoft.org/schema/mule/fandi-sapi" xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:order-papi="http://www.mulesoft.org/schema/mule/order-papi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/order-papi http://www.mulesoft.org/schema/mule/order-papi/current/mule-order-papi.xsd
@@ -10,7 +10,8 @@ http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/sche
 http://www.mulesoft.org/schema/mule/fandi-sapi http://www.mulesoft.org/schema/mule/fandi-sapi/current/mule-fandi-sapi.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/dealernet-sapi http://www.mulesoft.org/schema/mule/dealernet-sapi/current/mule-dealernet-sapi.xsd
-http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
 	<global-property doc:name="Global Property" doc:id="23bc93d9-7dc8-4bd5-ad65-b4c6c07a635f" name="mule.env" value="qa" />
 	<configuration-properties doc:name="Configuration properties" doc:id="3bf05177-ac82-499a-8e93-538320d90b88" file="properties\config-${mule.env}.yaml" />
 	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="47083028-4b0f-4e47-a120-5339c746934c" file="properties\secured-config-${mule.env}.yaml" key="${secure.key}" >
@@ -27,6 +28,7 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 		<os:connection />
 	</os:config>
 	<os:object-store name="Object_store" doc:name="Object store" doc:id="c7dd302a-4b16-4cb9-9dd4-3fcc885242bb" entryTtl="2" entryTtlUnit="DAYS" expirationInterval="30" config-ref="ObjectStore_Config" />
+	<api-gateway:autodiscovery apiId="${api.id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="3c4095dc-7108-4e97-8183-d39ff92295b1" flowRef="order-papi-main" />
 	<error-handler name="globalError_Router" doc:id="d89b4afd-8779-465b-9f78-109cd57f97e8" >
 		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="050ddb45-367d-4bc2-bd51-9a5c13a275fa" type="*:BAD_REQUEST" >
 			<ee:transform doc:name="Error Payload" doc:id="82b22e87-4774-4ec6-8abe-c93ed973cf14" >

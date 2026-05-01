@@ -1,11 +1,11 @@
 salesforce-sapi:
-  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]" 
+  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]"
   client_secret: "![HtZIik6eahnhfvV3EaBTNvviS4gBoZUAvDBjEFE9JzwbKEr/MFuEMA==]"
 
 dealernet-sapi:
-  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]" 
-  client_secret: "![HtZIik6eahnhfvV3EaBTNvviS4gBoZUAvDBjEFE9JzwbKEr/MFuEMA==]"
+  client_id: "![2HO1LLCv2gU/g3iAB2TGLTUNDPWPEWi2EFvMxQnDIqu3s+oLi8WPww==]"
+  client_secret: "![XT/0QfH3adT3srIML0jsI6B5EWE2ZaKrj9pjmvPwtLbjGfzzo7Snhg==]"
   
 fandi-sapi:
-  client_id: "![VonK6EB5YWnWRjqCJW9LaidepUFn2/DII5SA4VqXfwpXjtFhFZ0XzA==]" 
-  client_secret: "![HtZIik6eahnhfvV3EaBTNvviS4gBoZUAvDBjEFE9JzwbKEr/MFuEMA==]"
+  client_id: "![2HO1LLCv2gU/g3iAB2TGLTUNDPWPEWi2EFvMxQnDIqu3s+oLi8WPww==]"
+  client_secret: "![XT/0QfH3adT3srIML0jsI6B5EWE2ZaKrj9pjmvPwtLbjGfzzo7Snhg==]"

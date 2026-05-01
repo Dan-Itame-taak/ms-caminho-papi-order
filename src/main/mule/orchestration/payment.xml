@@ -32,7 +32,11 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 				<fixed-frequency startDelay="10" timeUnit="MINUTES" frequency="30"/>
 			</scheduling-strategy>
 		</scheduler>
-		<salesforce-sapi:get-creditanalysis doc:name="Get Clients Informations - Salesforce" doc:id="54fe5b12-64d9-4c8a-a845-5922048ed014" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
+		<choice doc:name="Choice" doc:id="0987aebd-9ee4-4d17-ba1e-61dadf607228" >
+			<when expression="#[payload == null]">
+				<salesforce-sapi:get-creditanalysis doc:name="Get Clients Informations - Salesforce" doc:id="54fe5b12-64d9-4c8a-a845-5922048ed014" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" />
+			</when>
+		</choice>
 		<ee:transform doc:name="Transform Message" doc:id="c220a39a-fd3b-44de-979c-34cc462847d9" >
 			<ee:message >
 			</ee:message>
@@ -48,7 +52,9 @@ payload]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<logger level="INFO" doc:name="Logger After Get Client Informations" doc:id="c6a7c6f0-d6ea-4f43-b1c0-74201ef84c6d" message="Integration: send-credit-analysis-to-salesforce  | correlationId: #[correlationId] | payload: #[payload]"/>
-		<foreach doc:name="For Each" doc:id="6112f991-ac06-43ab-9e50-2f875046a6ca" >
+		<choice doc:name="Choice" doc:id="691b3278-cf64-4219-93f3-6c19b804b1a9" >
+			<when expression="#[sizeOf(payload) &gt;= 1]">
+				<foreach doc:name="For Each" doc:id="6112f991-ac06-43ab-9e50-2f875046a6ca">
 			<ee:transform doc:name="Set Variables to Query Credit Analysis" doc:id="6672e4b0-5936-4428-a4b2-84fffcffdd5a">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
@@ -56,8 +62,8 @@ output application/json
 ---
 payload]]></ee:set-payload>
 			</ee:message>
-				<ee:variables >
-					<ee:set-variable variableName="headers" ><![CDATA[%dw 2.0
+				<ee:variables>
+					<ee:set-variable variableName="headers"><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -65,11 +71,11 @@ output application/json
 	"client_id": p('secure::fandi-sapi.client_id'),
 	"client_secret": p('secure::fandi-sapi.client_secret')
 }]]></ee:set-variable>
-					<ee:set-variable variableName="path" ><![CDATA[%dw 2.0
+					<ee:set-variable variableName="path"><![CDATA[%dw 2.0
 output application/json
 ---
 "credit-analysis"]]></ee:set-variable>
-					<ee:set-variable variableName="queryParams" ><![CDATA[%dw 2.0
+					<ee:set-variable variableName="queryParams"><![CDATA[%dw 2.0
 output application/java
 ---
 {
@@ -80,15 +86,29 @@ output application/java
 				</ee:variables>
 		</ee:transform>
 			<http:request doc:name="Get Credit Analysis" doc:id="363b88ff-7a21-4097-8c9b-15165fb2e24e" config-ref="HTTP_Request_Sapi_Fandi" path="#[vars.path]">
-				<http:headers ><![CDATA[#[vars.headers default {}]]]></http:headers>
-				<http:uri-params ><![CDATA[#[vars.uriParams default {}]]]></http:uri-params>
-				<http:query-params ><![CDATA[#[vars.queryParams default {}]]]></http:query-params>
+				<http:headers><![CDATA[#[vars.headers default {}]]]></http:headers>
+				<http:uri-params><![CDATA[#[vars.uriParams default {}]]]></http:uri-params>
+				<http:query-params><![CDATA[#[vars.queryParams default {}]]]></http:query-params>
 			</http:request>
-			<ee:transform doc:name="Map Fandi Return" doc:id="e059701b-5c04-4fee-af7a-0311a4670bd1" >
+			<ee:transform doc:name="Filter Payload" doc:id="b60776ed-4745-4a10-8477-4ae1f997e6ca" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if (sizeOf(payload) > 1)
+payload pluck (value, index) -> 
+    if(vars.vPayload.valorFinanciamento[vars.counter - 1] == value.ValorFinanciado) (value)
+    else null
+else
+[payload.OperacaoParceiro]
+]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<ee:transform doc:name="Map Fandi Return" doc:id="e059701b-5c04-4fee-af7a-0311a4670bd1">
 				<ee:message>
 				</ee:message>
-				<ee:variables >
-					<ee:set-variable variableName="arrayAnalysis" ><![CDATA[%dw 2.0
+				<ee:variables>
+					<ee:set-variable variableName="arrayAnalysis"><![CDATA[%dw 2.0
 output application/json
 ---
 vars.arrayAnalysis ++ [{
@@ -96,23 +116,24 @@ vars.arrayAnalysis ++ [{
 		"type": "CreditAnalysis__c"
 	},
 	Id: vars.vPayload.id[vars.counter - 1],
-    ApprovedFinancedAmount__c: payload.OperacaoParceiro.Valor,
-    InstallmentAmount__c: payload.OperacaoParceiro.RetornoValor,
-    InstallmentQuantity__c: payload.OperacaoParceiro.QtdParcelas,
-    FinancingBank__c: payload.OperacaoParceiro.FinanceiraNome,
-    Status__c: if (payload.OperacaoParceiro.OperacaoSituacao == "APROVADA") "Aprovado" 
-    else if(payload.OperacaoParceiro.OperacaoSituacao == "REANÁLISE") "Reanálise"
-    else if(payload.OperacaoParceiro.OperacaoSituacao == "REJEITADA") "Rejeitado"
-    else if(payload.OperacaoParceiro.OperacaoSituacao == "EM ANÁLISE") "Em Analise"
-    else payload.OperacaoParceiro.OperacaoSituacao
+    ApprovedFinancedAmount__c: payload[0].Valor,
+    InstallmentAmount__c: payload[0].RetornoValor,
+    InstallmentQuantity__c: payload[0].QtdParcelas,
+    FinancingBank__c: payload[0].FinanceiraNome,
+    Status__c: if (payload[0].OperacaoSituacao == "APROVADA") "Aprovado" 
+    else if(payload[0].OperacaoSituacao == "REANÁLISE") "Reanálise"
+    else if(payload[0].OperacaoSituacao == "REJEITADA") "Rejeitado"
+    else if(payload[0].OperacaoSituacao == "EM ANÁLISE") "Em Analise"
+    else if(payload[0].OperacaoSituacao == "RECUSADA") "Rejeitado"
+    else payload[0].OperacaoSituacao
 }]]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
 		</foreach>
-		<logger level="INFO" doc:name="Logger After Map" doc:id="bdb908e9-cd00-44c1-9cc7-b284b97f99ef" message="Integration: send-credit-analysis-to-salesforce  | correlationId: #[correlationId] | payload: #[payload]"/>
-		<ee:transform doc:name="Format Payload to Salesforce" doc:id="b0f69f3b-2da3-43b1-bd63-42b3ddf0c4b1" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+				<logger level="INFO" doc:name="Logger After Map" doc:id="bdb908e9-cd00-44c1-9cc7-b284b97f99ef" message="Integration: send-credit-analysis-to-salesforce  | correlationId: #[correlationId] | payload: #[payload]" />
+				<ee:transform doc:name="Format Payload to Salesforce" doc:id="b0f69f3b-2da3-43b1-bd63-42b3ddf0c4b1">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -122,8 +143,13 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<salesforce-sapi:send-credit-analysis-status doc:name="Send Credit Analysis Status" doc:id="15791430-7009-482d-a724-918b2b4be6d7" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
-		<logger level="INFO" doc:name="Logger" doc:id="a08bf515-c2c7-4fa4-b846-a3c08e31ed8f" message="#[payload]"/>
+				<salesforce-sapi:send-credit-analysis-status doc:name="Send Credit Analysis Status" doc:id="15791430-7009-482d-a724-918b2b4be6d7" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" />
+				<logger level="INFO" doc:name="Logger" doc:id="a08bf515-c2c7-4fa4-b846-a3c08e31ed8f" message="#[payload]" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="21b96a18-83f6-46aa-8bf0-23b07a89b2c3" message="Não foram encontradas simulações em aberto"/>
+			</otherwise>
+		</choice>
 		<error-handler ref="globalError_Router" />
 	</flow>
 </mule>
