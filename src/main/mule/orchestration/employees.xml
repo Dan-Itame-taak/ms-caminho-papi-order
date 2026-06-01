@@ -8,9 +8,9 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
 	<flow name="send-employees-shifts-to-salesforce" doc:id="59f02b15-c455-485f-a622-8266b1358fe4" >
-		<scheduler doc:name="Scheduler" doc:id="b43fad1d-b10d-4c9e-bd86-b8f645704e72" >
+		<scheduler doc:name="Scheduler 8 AM and 1 PM" doc:id="b43fad1d-b10d-4c9e-bd86-b8f645704e72" >
 			<scheduling-strategy >
-				<fixed-frequency frequency="60" startDelay="10" timeUnit="MINUTES"/>
+				<cron expression="0 0 8,13 ? * *" timeZone="America/Sao_Paulo"/>
 			</scheduling-strategy>
 		</scheduler>
 		<scatter-gather doc:name="Scatter-Gather" doc:id="890c4a6a-e912-4c0f-b73c-3e35e54a60ab">
@@ -108,8 +108,15 @@ output application/json
 	records: payload
 }]]></ee:set-payload>
 							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="sellerCode" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.ExternalId__c]]></ee:set-variable>
+							</ee:variables>
 						</ee:transform>
 						<flow-ref doc:name="send-employee-shift" doc:id="22f5617a-6ab6-4545-9f11-ff51f3ed84f7" name="send-employee-shift" />
+						<logger level="INFO" doc:name="Logger" doc:id="3f504335-beae-41f0-8ab0-eab701bd654d" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idFuncionario: vars.sellerCode[(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idFuncionario: vars.sellerCode[(index)],&#10;    description: value.errors[0].message&#10;}]" />
 					</batch:aggregator>
 				</batch:step>
 			</batch:process-records>
@@ -145,7 +152,7 @@ payload  ]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<sub-flow name="scheduled-consultant-subFlow" doc:id="8dc59051-3496-47d0-b4a0-046bbfeef826" >
-		<ee:transform doc:name="Variables to Get Consultants Schedulling and recordType" doc:id="fff9c87d-69dc-4d4f-937c-c5ce6a7bf897">
+		<ee:transform doc:name="Variables to Get Consultants Schedulling and  Scheduling recordType" doc:id="fff9c87d-69dc-4d4f-937c-c5ce6a7bf897">
 			<ee:message />
 			<ee:variables>
 				<ee:set-variable variableName="department"><![CDATA[%dw 2.0
@@ -167,6 +174,21 @@ attributes.queryParams.company]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="search-recordType-salesforce" doc:id="99fb1e36-63f5-42d8-8fa8-6f43a920784a" name="search-recordType-salesforce" target="rTypeCons" />
+		<ee:transform doc:name="Variables to Search WorkOrder recordType" doc:id="3963d168-c543-49a8-9315-2a3127ab35c1" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="object" ><![CDATA[%dw 2.0
+output application/json
+---
+"WorkOrder"]]></ee:set-variable>
+				<ee:set-variable variableName="name" ><![CDATA[%dw 2.0
+output application/json
+---
+"Pós Vendas"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="search-recordType-salesforce" doc:id="40800eb3-d5dc-43bf-b79d-383dbf96eda6" name="search-recordType-salesforce" target="rTypeWorkOrder"/>
 		<flow-ref doc:name="get-employees-scheduling-status" doc:id="7401a2ae-6b1e-4399-8dc5-2bf2787e754f" name="get-employees-scheduling-status" />
 		<choice doc:name="Choice" doc:id="d66a65ba-b824-4c2f-bdcb-c27c4e35bae1" >
 			<when expression="#[sizeOf(payload) &gt; 0]">
@@ -183,9 +205,11 @@ output application/json
 ---
 []]]></ee:set-variable>
 				<ee:set-variable variableName="osCodes"><![CDATA[%dw 2.0
+import divideBy from dw::core::Arrays
+var dPayload = payload.codigoAgendamento divideBy 200
 output application/json
 ---
-payload.codigoAgendamento]]></ee:set-variable>
+dPayload]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 				<foreach doc:name="For Each" doc:id="773b3058-c18b-4ebb-80ac-6f4b079d8895">
@@ -214,6 +238,7 @@ output application/json
 		//ProcessPhase__c: payload.partSequence,
 		RequiresWashing__c: payload.exigeLavagem default false,
 		ValetService__c: payload.servicoValet default false,
+		RecordTypeId :vars.rTypeWorkOrder,
 		Account: {
 			ExternalId__c: payload.codigoCliente
 		},
@@ -240,16 +265,20 @@ vars.arrayOS ++ payload]]></ee:set-variable>
 				<ee:transform doc:name="Payload to Send OS" doc:id="d105f490-c659-4eda-83fd-edd42c9de194">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
+import divideBy from dw::core::Arrays
+var dPayload = vars.arrayOS divideBy 200
 output application/json
 ---
-{
+dPayload map (value, index) -> {
 	allOrNone: false,
-	records: vars.arrayOS
+	records: value
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-				<flow-ref doc:name="send-os-status-to-salesforce" doc:id="574407ab-804f-4f17-abb8-069e843e927f" name="send-os-status-to-salesforce" />
-				<logger level="INFO" doc:name="Logger" doc:id="4fea2aee-541e-4c5a-a51b-aa211d6407e7" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idOS: vars.osCodes[(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idOS: vars.osCodes[(index)],&#10;    description: value.errors[0].message&#10;}]" />
+				<foreach doc:name="For Each" doc:id="c91f0f51-208c-4f79-8ff6-0066e9654f42" >
+					<flow-ref doc:name="send-os-status-to-salesforce" doc:id="574407ab-804f-4f17-abb8-069e843e927f" name="send-os-status-to-salesforce" />
+					<logger level="INFO" doc:name="Logger" doc:id="4fea2aee-541e-4c5a-a51b-aa211d6407e7" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idOS: vars.osCodes[(vars.counter -1)][(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idOS: vars.osCodes[(vars.counter -1)][(index)],&#10;    description: value.errors[0].message&#10;}]" />
+				</foreach>
 				<flow-ref doc:name="employees-scheduling-batch" doc:id="a27d9099-357a-4c0d-9fb4-7a8cadc022ee" name="employees-scheduling-batch" />
 			</when>
 			<otherwise >
@@ -287,9 +316,11 @@ output application/json
 ---
 payload ]]></ee:set-variable>
 				<ee:set-variable variableName="lineCodes"><![CDATA[%dw 2.0
+import divideBy from dw::core::Arrays
+var dPayload = payload.codigoIdServico divideBy 200
 output application/json
 ---
-payload.codigoIdServico]]></ee:set-variable>
+dPayload]]></ee:set-variable>
 				<ee:set-variable variableName="arrayLine"><![CDATA[%dw 2.0
 output application/json
 ---
@@ -365,16 +396,20 @@ vars.arrayLine ++ payload]]></ee:set-variable>
 				<ee:transform doc:name="Payload to Send LineItems" doc:id="015e93c6-91d8-4aa6-a180-836fd3d1bfa3">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
+import divideBy from dw::core::Arrays
+var dPayload = vars.arrayLine divideBy 200
 output application/json
 ---
-{
+dPayload map (value, index) -> {
 	allOrNone: false,
-	records: vars.arrayLine
+	records: value
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-				<flow-ref doc:name="send-os-lineItems-to-salesforce" doc:id="8afb5dcc-e8bc-4596-b1d8-c9a9e673e0dd" name="send-os-lineItems-to-salesforce" />
-				<logger level="INFO" doc:name="Logger" doc:id="7ffebb0a-f238-4097-8eb0-ddd91f2722ab" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idLineItem: vars.lineCodes[(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idLineItem: vars.lineCodes[(index)],&#10;    description: value.errors[0].message&#10;}]" />
+				<foreach doc:name="For Each" doc:id="ac986dde-163b-496c-a8e0-3fe24ef8cf1d" >
+					<flow-ref doc:name="send-os-lineItems-to-salesforce" doc:id="8afb5dcc-e8bc-4596-b1d8-c9a9e673e0dd" name="send-os-lineItems-to-salesforce" />
+					<logger level="INFO" doc:name="Logger" doc:id="7ffebb0a-f238-4097-8eb0-ddd91f2722ab" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload map (value, index) -&gt; if(value.success == true)&#10;{&#10;    idLineItem: vars.lineCodes[(vars.counter -1)][(index)],&#10;    sfId: value.id&#10;}&#10;else &#10;{&#10;    idLineItem: vars.lineCodes[(vars.counter -1)][(index)],&#10;    description: value.errors[0].message&#10;}]" />
+				</foreach>
 				<flow-ref doc:name="employees-scheduling-batch" doc:id="981581ea-7f6b-4f1c-8728-2ddce67e29ad" name="employees-scheduling-batch" />
 			</when>
 			<otherwise >

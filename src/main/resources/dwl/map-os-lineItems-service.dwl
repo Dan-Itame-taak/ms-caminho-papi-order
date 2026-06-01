@@ -15,8 +15,8 @@ var finalMap = pluckedPayload map ((value, index) -> {
 		"type": "WorkOrderLineItem"
 	},
     ExternalId__c: value.codigoServico,
-    StartDate: (value.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String,
-    EndDate: ((value.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String + duration({ minutes: (value.horasDuracaoServico/60)}))[0 to 18],
+    (StartDate: (value.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String) if !isBlank(value.horaAgendadaProdutivo),
+    (EndDate: ((value.horaAgendadaProdutivo as DateTime + |PT3H|)[0 to 18] as String + duration({ minutes: (value.horasDuracaoServico/60)}))[0 to 18]) if !isBlank(value.horaAgendadaProdutivo),
     DurationTime__c: (value.horasDuracaoServico / 3600),
     TmoExecutes__c: value.executa,
     TmoRequiresTest__c: value.exigeTeste default false,

@@ -48,7 +48,7 @@ output application/java
 []]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<salesforce-sapi:get-service-order-status doc:name="Get service order status" doc:id="083f3185-ff1a-4fc9-bf6b-763bd6feaf46" config-ref="Salesforce_sapi_Config" id="#[vars.workOrderId]"/>
+		<salesforce-sapi:get-service-order-status doc:name="Get service order status" doc:id="083f3185-ff1a-4fc9-bf6b-763bd6feaf46" config-ref="Salesforce_sapi_Config" id="#[vars.workOrderId]" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}"/>
 		<logger level="INFO" doc:name="Logger Before Map Register Service" doc:id="57b0c200-7ac6-4b5d-bebe-1bf3d94d06ca" message="Integration: send-register-service-to-dealernet | correlationId: #[correlationId] | payload: #[payload]" />
 		<ee:transform doc:name="Payload send to Dealernet" doc:id="40d2920d-d518-41f5-82ed-295952b9ea44" >
 			<ee:message >
@@ -64,7 +64,7 @@ output application/json
 payload.compositeResponse.body.records[1]]]></ee:set-variable>
 				<ee:set-variable variableName="consultantRequest" ><![CDATA[%dw 2.0
 import * from Modules::orderFunctions
-
+import remove from dw::core::Strings
 output application/json
 
 var workOrder = payload.compositeResponse.body[0].records[0]
@@ -92,7 +92,7 @@ var scheduling = payload.compositeResponse.body[1].records[0]
     "clienteAguarda": workOrder.CustomerWaiting__c,
     "exigeLavagem": workOrder.RequiresWashing__c,
 //    "entregaDomicilio": workOrder.Store__r.DealerNetExternalId__c,
-    "km": workOrder.CurrentMileage__c,
+    "km": workOrder.CurrentMileage__c remove ".",
     "clienteDesejaTransporte": workOrder.CustomerNeedsTransport__c,
     "clienteServicoValet": workOrder.ValetService__c,
     "servicoExpresso": workOrder.ExpressService__c,
@@ -114,6 +114,13 @@ var scheduling = payload.compositeResponse.body[1].records[0]
     "inspecaoElevador": workOrder.LiftInspection__c,
 //    "partSequence": workOrder.Store__r.DealerNetExternalId__c,
 //    "horimet": workOrder.Store__r.DealerNetExternalId__c,
+}]]></ee:set-variable>
+				<ee:set-variable variableName="parentId" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    consultantId: payload.compositeResponse.body[1].records[0].Id,
+    productiveId: payload.compositeResponse.body[2].records[0].Id
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
@@ -172,7 +179,7 @@ lineItems map (lineItem, index) -> {
     "OficinaServico_UsuarioCodResponsavel": (productiveScheduling[(index)].Seller__r.ExternalId__c splitBy ("_"))[1], //Mandar sem o produtivo_
     "OficinaServico_SetorExecucao": "OFC",//lineItem.ExecutionSector__c, //Precisa ser OFC para o caso de Oficina. Precisa pegar o mapping do Dealer.
     
-    "OficinaServico_DescricaoProblemaSolucao": productiveScheduling.Description default "Teste", //Colocar como Obrigatório
+    "OficinaServico_DescricaoProblemaSolucao": productiveScheduling.Description default "", //Colocar como Obrigatório
     "OficinaServico_CustoPrevisto": 0, 
     "OficinaServico_CustoReal": 0, 
     "OficinaServico_ServicoRapido": 0,
@@ -255,9 +262,17 @@ vars.productiveEndDate ++ {operacao: "Atualizar"}]]></ee:set-variable>
 				</otherwise>
 			</choice>
 		</foreach>
-		<ee:transform doc:name="Build Final Response" doc:id="11009fb7-f40c-4c92-8bb8-de0b2e11bd40" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<try doc:name="Try" doc:id="3e55b009-f515-4634-b2fe-dff8e9bdf0ce" >
+			<flow-ref doc:name="register-service-and-OS-history-subflow" doc:id="f104dbc5-af56-4b26-8c3e-cbf3d266e8e4" name="register-service-and-OS-history-subflow" target="history" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6d926dd2-a1c0-484a-a597-83fadab3a224" >
+					<logger level="INFO" doc:name="Logger Error" doc:id="0b1a55d4-f0ab-46b5-8b05-114b9225c569" message="Erro ao enviar historico"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Build Final Response" doc:id="11009fb7-f40c-4c92-8bb8-de0b2e11bd40">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -271,6 +286,8 @@ output application/json
     }
 }]]></ee:set-payload>
 			</ee:message>
+			<ee:variables>
+			</ee:variables>
 		</ee:transform>
 	</sub-flow>
 	<sub-flow name="send-proposal-to-dealernet-subflow" doc:id="05d5da8f-be9b-4bfb-9087-f2803ebebf3a" >
@@ -336,6 +353,20 @@ output application/json
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 		<logger level="INFO" doc:name="Logger Before Map" doc:id="8f18cfc8-79fc-445f-b4f6-ed2e668c8d1b" message="Integration: send-proposal-to-dealernet | correlationId: #[correlationId] | payload: #[payload]" />
+		<!-- [STUDIO:"Choice"]<choice doc:name="Choice" doc:id="98be07a5-def6-4465-aaa4-5248bf515b19" >
+			<when expression="CAMPO FLAG PARA VENDA DIRETA">
+				<ee:transform doc:name="Direct Sale Proposal Payload to Dealernet" doc:id="4595fb1c-bd95-46a7-ab36-79589357ad92" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+{
+}&#93;&#93;></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="Flow Reference" doc:id="21cf984d-f78b-4845-8a20-31f8d9490562" />
+			</when>
+		</choice> [STUDIO] -->
 		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="d2c057d7-f417-46a1-b508-759664fb82d2" >
 			<ee:message >
 			</ee:message>
@@ -598,15 +629,17 @@ var asset = payload.compositeResponse.body[0].records[0]
 var statusToCode = {
   "Reservado": "AUT",
   "Comprado": "AUT",
-  "Disponível": "CAN"
+  "Disponivel": "CAN"
 }
 ---
 {
     //"VeiculoReserva_Codigo": asset.BookingCode__c,
     //"VeiculoReserva_BancoPedidoCod": asset.Opportunity__r.RecordType.Name,
     "VeiculoReserva_ValorEntrada": asset.Price,
-    "VeiculoReserva_DataInicial": asset.ReservationDateTime__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
-    "VeiculoReserva_DataFinal": asset.ReservationExpirationDateTime__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+    "VeiculoReserva_DataInicial": if(asset.ReservationDateTime__c != null) (asset.ReservationDateTime__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} - |PT3H|) as String {format: "yyyy-MM-dd'T'HH:mm:ss"} 
+    else null,
+    "VeiculoReserva_DataFinal": if(asset.ReservationExpirationDateTime__c != null) (asset.ReservationExpirationDateTime__c as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} - |PT3H|) as String {format: "yyyy-MM-dd'T'HH:mm:ss"}
+    else null,
     "VeiculoReserva_Status": statusToCode[asset.Status] default null,
     "VeiculoReserva_VeiculoCod": asset.ExternalId__c,
     "Atendimento_Codigo": asset.Opportunity__r.DealerNetServiceCode__c,
@@ -651,7 +684,7 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT YearCode__c, EvaluationPreference__c, EvaluationValidityDays__c, CaminhoPrice__c, FipeValue__c, InformedValue__c, LastAutoAvaliarSync__c, ModelId__c, ModelYear__c, Name, PriceObservation__c, Renavam__c, Status__c, Store__r.ExternalId__c, Store__r.DealerNetExternalId__c, ValuationGoal__c, ValuationObs__c, ValuationValue__c, VehicleColorId__c, VehicleMileage__c, VehiclePlate__c, VehicleVIN__c, Expenses__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM AssessmentUsed__c WHERE Id = '" ++ vars.assesmentId ++ "'",
+      "url": "/services/data/v63.0/query?q=SELECT YearCode__c, EvaluationPreference__c, EvaluationValidityDays__c, CaminhoPrice__c, FipeValue__c, InformedValue__c, LastAutoAvaliarSync__c, Asset__r.ModelCode__c, ModelId__c, ModelYear__c, Name, PriceObservation__c, Asset__r.Renavam__c, Status__c, Store__r.ExternalId__c, Store__r.DealerNetExternalId__c, ValuationGoal__c, ValuationObs__c, ValuationValue__c, VehicleColorId__c, VehicleMileage__c, Asset__r.StatePlate__c, VehiclePlate__c, VehicleVIN__c, Expenses__c, TYPEOF Owner WHEN User THEN DealerNetCode__c END FROM AssessmentUsed__c WHERE Id = '" ++ vars.assesmentId ++ "'",
       "referenceId": "AssessmentUsedQuery"
     },
     {
@@ -672,7 +705,7 @@ output application/json
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
-
+import remove from dw::core::Strings
 var asset = payload.compositeResponse.body[0].records[0]
 
 var installment = payload.compositeResponse.body[1].records[0]
@@ -680,8 +713,9 @@ var installment = payload.compositeResponse.body[1].records[0]
 {
 	"AvaliacaoUsado_EmpresaCod": asset.Store__r.DealerNetExternalId__c,
 	"AvaliacaoUsado_Placa": asset.VehiclePlate__c,
-	"AvaliacaoUsado_Kilometragem": asset.VehicleMileage__c,
+	"AvaliacaoUsado_Kilometragem": asset.VehicleMileage__c remove ".",
 	"AvaliacaoUsado_CorCod_Externa": asset.VehicleColorId__c,
+	"AvaliacaoUsado_ModeloVeiculoCod": asset.Asset__r.ModelCode__c,
 	"AvaliacaoUsado_MotAvaliacaoCod": "1",
 	"AvaliacaoUsado_Observacao": asset.ValuationObs__c,
 	"AvaliacaoUsado_PrecoCliente": asset.InformedValue__c,
@@ -691,14 +725,14 @@ var installment = payload.compositeResponse.body[1].records[0]
 	"AvaliacaoUsado_Status": "AUT", //asset.Status__c,
 	"AvaliacaoUsado_VeiculoAnoCod": (asset.YearCode__c splitBy  "_")[0],
 	"AvaliacaoUsado_Chassi": asset.VehicleVIN__c,
-	"AvaliacaoUsado_NroRenavam": asset.Renavam__c,
+	"AvaliacaoUsado_NroRenavam": asset.Asset__r.Renavam__c,
 	"Atendimento_Codigo": installment.Quote__r.Opportunity.DealerNetServiceCode__c,
 	"AvaliacaoUsado_UsuarioCod": asset.Owner.DealerNetCode__c,
 	"AvaliacaoUsado_PessoaCodProprietario": installment.Quote__r.Account.ExternalId__c,
 	"AvaliacaoUsado_DataAvaliacao": asset.LastAutoAvaliarSync__c,
 	"AvaliacaoUsado_FinalidadeCompraCod": asset.ValuationGoal__c,
 	"AvaliacaoUsado_ValorSugeridoVendaSistema": asset.ValuationValue__c,
-	"AvaliacaoUsado_EstadoCod_Placa ": asset.VehiclePlate__c,
+	"AvaliacaoUsado_EstadoCod_Placa": asset.Asset__r.StatePlate__c,
 	"AvaliacaoUsado_DiasLimiteEntradaNFUsados": asset.campos,
 	"AvaliacaoUsado_ValorTabela": asset.FipeValue__c,
 	"AvaliacaoUsado_SugeridoCompra": asset.ValuationValue__c,
@@ -750,7 +784,7 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT Id, Name, CloseDate, LeadSource, LossReason__c, Description, RecordType.Name, Owner.DealerNetCode__c, Account.ExternalId__c, Asset__r.ModelCode__c, CreatedDate, Store__r.DealerNetExternalId__c FROM Opportunity WHERE Id = '" ++ vars.opportunityId ++ "'",
+      "url": "/services/data/v63.0/query?q=SELECT Id, Name, CloseDate, LeadSource, LossReason__c, Description, RecordType.Name, ServiceNature__c, Owner.DealerNetCode__c, Account.ExternalId__c, Asset__r.ModelCode__c, CreatedDate, Store__r.DealerNetExternalId__c FROM Opportunity WHERE Id = '" ++ vars.opportunityId ++ "'",
       "referenceId": "OpportunityQuery"
     }
   ]
@@ -766,6 +800,7 @@ output application/json
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="serviceAppointmentRequest" ><![CDATA[%dw 2.0
+import * from Modules::orderFunctions
 output application/json
 var opportunity = payload.compositeResponse.body[0].records[0]
 
@@ -786,7 +821,10 @@ var leadSourceToIntermediate = {
     "Mercado Livre": "PORTAL INTERNET",
     "Landing Page": "PORTAL INTERNET",
     "Recall Ativo": "TELEFÔNICO ATIVO",
-    "Passagem Loja": "PRESENCIAL / LOJA"
+    "Passagem Loja": "PRESENCIAL / LOJA",
+    "Revisão KM": "REVISAO",
+    "Revisão Tempo": "REVISAO",
+    "Prospecção": "PROSPECCAO"
 }
 var intermediateToCode = {
     "TELEFÔNICO ATIVO": "TAT",
@@ -802,7 +840,9 @@ var intermediateToCode = {
     "CONTATO POR TELEFONE": "TAT",
     "NÃO PRESENCIAL / INTERESTADUAL": "TAT",
     "LEAD MONTADORA": "MRE",
-    "D-CHECK": "ALT"
+    "D-CHECK": "ALT",
+    "REVISAO": "BAL",
+    "PROSPECCAO": "TAT"
 }
 ---
 {
@@ -810,14 +850,14 @@ var intermediateToCode = {
     "Atendimento_PessoaCod": opportunity.Account.ExternalId__c,
     "Atendimento_Status": "ABE",
     "Atendimento_UsuarioCod": opportunity.Owner.DealerNetCode__c,
-    // "NaturezaAtendimento_Codigo": opportunity.
+    "NaturezaAtendimento_Codigo": opportunity.ServiceNature__c,
     "Atendimento_DataVendaDeclarada": opportunity.CloseDate,
     "Atendimento_MeioContato": intermediateToCode[leadSourceToIntermediate[opportunity.LeadSource] default ""] default null,
     "Atendimento_ModeloVeiculoCod": opportunity.Asset__r.ModelCode__c,
     "Atendimento_DataVendaPerdida": opportunity.CloseDate,
     "Atendimento_VeiculoCod": opportunity.Asset__r.ModelCode__c,
     //"Atendimento_AvaliacaoVendedor": opportunity.Description,
-    "Atendimento_MotVendaPerdidaCod": opportunity.LossReason__c,
+    "Atendimento_MotVendaPerdidaCod": mapMotBendaPerdida(opportunity.LossReason__c),
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
@@ -919,5 +959,70 @@ orderItems map (item) -> {
 		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="e490785f-2127-43ca-b4df-437888658cbc" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_id}">
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
+	</sub-flow>
+	<sub-flow name="register-service-and-OS-history-subflow" doc:id="65e97c2d-8fcc-47b6-89e8-416c1f4b18b8" >
+		<ee:transform doc:name="Set Composite" doc:id="1a0fcd04-16fa-4d7a-b577-f3cb7581a956" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="compositeHistory" ><![CDATA[%dw 2.0
+output application/json skipNullOn = 'everywhere'
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+  	if (vars.parentId.consultantId != null) {
+	  "method": "GET",
+	  "url": "/services/data/v63.0/query?q=SELECT CreatedDate, DataType, Field, NewValue, OldValue, Parent.ApiNameRecordType__c, ParentId, Parent.ExternalId__c FROM Scheduling__History WHERE (Parent.LastModifiedDate__c >= 2026-05-10T10:45:06Z OR Parent.LastModifiedDate__c = null) AND ParentId = '" ++ vars.parentId.consultantId ++ "' ORDER BY CreatedDate ASC",
+	  "referenceId": "consultantHistory"
+	}
+	else null,
+	if( vars.parentId.productiveId != null) {
+	  "method": "GET",
+	  "url": "/services/data/v63.0/query?q=SELECT CreatedDate, DataType, Field, NewValue, OldValue, Parent.ApiNameRecordType__c, ParentId, Parent.ExternalId__c FROM Scheduling__History WHERE (Parent.LastModifiedDate__c >= 2026-05-10T10:45:06Z OR Parent.LastModifiedDate__c = null) AND ParentId = '" ++ vars.parentId.productiveId ++ "' ORDER BY CreatedDate ASC",
+	  "referenceId": "productiveHistory"
+	  }
+	else null
+	]
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="26f13c59-f38d-449b-8d7e-e9b3c45e336b" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" target="compositeHistory">
+				<salesforce-sapi:composite-de_25-operaes-request-data><![CDATA[#[vars.compositeHistory]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+			</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Variables to send history" doc:id="75359aac-7105-4e42-b7bb-62efbebd0c40">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="consultHistory"><![CDATA[%dw 2.0
+import historyMap from Modules::orderFunctions
+var consult = vars.compositeHistory.compositeResponse.body[0].records
+output application/json
+---
+consult map (value, index) -> {
+    agCode: value.Parent.ExternalId__c,
+    obs: historyMap(value.Field, value.OldValue, value.NewValue),
+    operation: if (value.Field == "created") "CRI" else "ALT"
+}]]></ee:set-variable>
+					<ee:set-variable variableName="productiveHistory"><![CDATA[%dw 2.0
+import historyMap from Modules::orderFunctions
+var prod = vars.compositeHistory.compositeResponse.body[1].records
+output application/json
+---
+prod map (value, index) -> {
+    osCode: value.Parent.ExternalId__c,
+    obs: historyMap(value.Field, value.OldValue, value.NewValue),
+    operation: if (value.Field == "created") "CRI" else "ALT"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		<foreach doc:name="For Each" doc:id="4b5d7118-c5b9-4d40-9d7c-fa98230fcc93" collection="#[vars.consultHistory]">
+			<dealernet-sapi:send-register-service-history doc:name="Send Register Service History" doc:id="cda63c3f-6689-4529-8f42-684104d28a5d" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantHistory">
+			</dealernet-sapi:send-register-service-history>
+			</foreach>
+		<foreach doc:name="For Each" doc:id="fb0c3cf5-8a82-4b7c-aa41-f1118055bb35" collection="#[vars.productiveHistory]">
+				<dealernet-sapi:send-service-order-history doc:name="Send Service Order History" doc:id="186d162f-6588-4775-8761-7b5d98dbc136" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveHistory" />
+			</foreach>
 	</sub-flow>
 </mule>

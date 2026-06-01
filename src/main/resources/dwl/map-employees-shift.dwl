@@ -8,10 +8,11 @@ if (!isBlank(payload.consultName)){
     },
     ExternalId__c: "consultor_" ++ payload."consultCode",
     Name: payload."consultName",
-    MorningStart__c: payload."INICIO MANHA" as DateTime,
-    MorningEnd__c: payload."FIM MANHA" as DateTime,
-    AfternoonStart__c: payload."INICIO TARDE" as DateTime,
-    AfternoonEnd__c: payload."FIM TARDE" as DateTime,
+    factoryIsActive__c: payload."ativo",
+    MorningStart__c: (payload."INICIO MANHA" as DateTime + |PT3H|)[0 to 18] as String,
+    MorningEnd__c: (payload."FIM MANHA" as DateTime + |PT3H|)[0 to 18] as String,
+    AfternoonStart__c: (payload."INICIO TARDE" as DateTime + |PT3H|)[0 to 18] as String,
+    AfternoonEnd__c: (payload."FIM TARDE" as DateTime + |PT3H|)[0 to 18] as String,
     Store__r : {
         ExternalId__c: mapStore(payload."company")
         },
@@ -25,10 +26,11 @@ else
     },
     ExternalId__c: "produtivo_" ++ payload."prodCode",
     Name: payload."prodName",
-    MorningStart__c: payload."INICIO MANHA" as DateTime,
-    MorningEnd__c: payload."FIM MANHA" as DateTime,
-    AfternoonStart__c: payload."INICIO TARDE" as DateTime,
-    AfternoonEnd__c: payload."FIM TARDE" as DateTime,
+    factoryIsActive__c: payload."ativo",
+    MorningStart__c: (payload."INICIO MANHA" as DateTime + |PT3H|)[0 to 18] as String,
+    MorningEnd__c: (payload."FIM MANHA" as DateTime + |PT3H|)[0 to 18] as String,
+    AfternoonStart__c: (payload."INICIO TARDE" as DateTime + |PT3H|)[0 to 18] as String,
+    AfternoonEnd__c: (payload."FIM TARDE" as DateTime + |PT3H|)[0 to 18] as String,
     Store__r : {
         ExternalId__c: mapStore(payload."company")
     },

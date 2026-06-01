@@ -83,6 +83,10 @@ output application/java
 	tipoData: "C",
 	cpfCnpj: payload.cpf
 }]]></ee:set-variable>
+							<ee:set-variable variableName="vPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
 				</ee:variables>
 		</ee:transform>
 			<http:request doc:name="Get Credit Analysis" doc:id="363b88ff-7a21-4097-8c9b-15165fb2e24e" config-ref="HTTP_Request_Sapi_Fandi" path="#[vars.path]">
@@ -93,15 +97,17 @@ output application/java
 			<ee:transform doc:name="Filter Payload" doc:id="b60776ed-4745-4a10-8477-4ae1f997e6ca" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
+output application/json skipNullOn = 'everywhere'
 ---
+if(payload != null)
 if (sizeOf(payload) > 1)
 payload pluck (value, index) -> 
-    if(vars.vPayload.valorFinanciamento[vars.counter - 1] == value.ValorFinanciado) (value)
+    if(vars.vPayload.valorTotalVeiculo == value.ValorVeiculo as Number) (value)
     else null
 else
 [payload.OperacaoParceiro]
-]]></ee:set-payload>
+else
+null]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
 					<ee:transform doc:name="Map Fandi Return" doc:id="e059701b-5c04-4fee-af7a-0311a4670bd1">
@@ -109,13 +115,14 @@ else
 				</ee:message>
 				<ee:variables>
 					<ee:set-variable variableName="arrayAnalysis"><![CDATA[%dw 2.0
-output application/json
+output application/json skipNullOn = 'everywhere'
 ---
+if(payload != null)
 vars.arrayAnalysis ++ [{
 	attributes: {
 		"type": "CreditAnalysis__c"
 	},
-	Id: vars.vPayload.id[vars.counter - 1],
+	Id: vars.vPayload.id,
     ApprovedFinancedAmount__c: payload[0].Valor,
     InstallmentAmount__c: payload[0].RetornoValor,
     InstallmentQuantity__c: payload[0].QtdParcelas,
@@ -125,8 +132,11 @@ vars.arrayAnalysis ++ [{
     else if(payload[0].OperacaoSituacao == "REJEITADA") "Rejeitado"
     else if(payload[0].OperacaoSituacao == "EM ANÁLISE") "Em Analise"
     else if(payload[0].OperacaoSituacao == "RECUSADA") "Rejeitado"
+    else if(payload[0].OperacaoSituacao == "ENVIAR DEALER") "Aprovado"
     else payload[0].OperacaoSituacao
-}]]]></ee:set-variable>
+}]
+else
+vars.arrayAnalysis]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
 		</foreach>

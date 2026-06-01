@@ -119,6 +119,7 @@ fun mapExecSec(sector) = sector match {
 	case "EXL" -> "Express Lane"
 	case "OFC" -> "Oficina"
 	case "FEP" -> "Funilaria e Pintura"
+	else -> null
 }
 
 fun mapProdStatus(stat) = stat match {
@@ -147,3 +148,20 @@ fun mapPercComb(perc)= if(perc < 50) "1/4"
 else if (perc > 49 and perc < 75) "1/2"
 else if (perc > 74 and perc < 100) "1/3"
 else "1"
+
+fun mapMotBendaPerdida(cod) = cod match {
+	case "Lost to competitor" -> "4"
+	case "No Budget / Lost Funding" -> "16"
+	case "No Decision / Non-Responsive" -> "2"
+	case "Price" -> "30"
+	case "Other" -> "34"
+	else -> "35"
+}
+
+fun historyMap(field, old, new) = 
+    if (field == "created") "Agendamento Criado via Integrador SalesForce"
+    else if (field == "EndDate__c") "A data Final do agendamento foi alterada de " ++ (old default " ") ++ " para " ++ new default " "
+	else if (field == "Seller__c")  "O usuario responsável foi alterado de " ++ (old default " ") ++ " para " ++ new default " "
+	else if  (field == "StartDate__c") "A data Inicial do agendamento foi alterada de " ++ (old default " ") ++ " para " ++ new default " "
+	else if (field == "Status__c") "O Status do agendamento foi alterado de " ++ (old default " ") ++ " para " ++ new default " "
+	else  "Agendamento Alterado via Integrador SalesForce"
