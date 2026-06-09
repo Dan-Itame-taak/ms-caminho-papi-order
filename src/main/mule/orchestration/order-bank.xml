@@ -21,8 +21,10 @@ vars.orderBankResponse]]></ee:set-payload>
 	<sub-flow name="search-order-bank-in-salesforce" doc:id="6ab33108-0531-4ca6-af4b-ea546f24bfe8" >
 		<ee:transform doc:name="Variables to Composite - Order Bank" doc:id="1cfbf5be-ac92-435f-b5bb-feaa17ba8eef">
 			<ee:message>
-				<ee:set-payload><![CDATA[%dw 2.0
-output application/java
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="compositeRequest" ><![CDATA[%dw 2.0
+output application/json
 ---
 {
   "allOrNone": false,
@@ -32,8 +34,8 @@ output application/java
       "url": "/services/data/v63.0/query?q=SELECT Account__c, AssemblyDate__c, AssemblyWeek__c, BancoPedidoCodeDN__c, BancoPedidoType__c, Brand__c, ColorExternal__c, CommercialOrderNumber__c, ConfigurationDate__c, CreatedById, CreatedDate, Description__c, DiscountConcessionaria__c, DiscountMontadora__c, ExteriorColor__c, ExteriorColorCode__c, ExternalId__c, Id, InstallmentCode__c, InteriorColor__c, InteriorColorCode__c, InternalColor__c, IsDeleted, LastModifiedById, LastModifiedDate, LastReferencedDate, LastViewedDate, Model__c, Name, Oportunidade__c, OptionalDescription__c, Order__c, OrderNoHaveAsset__c, OwnerId, Product2__c, Quote__c, Status__c, SystemModstamp, VehicleAdaptation__c, VehicleBrandCode__c, VehicleBrandModel__c, VehicleModelCode__c, VehicleModelDescription__c, VehicleModelYear__c, VehicleYear__c, YearManufacture__c, YearModel__c,Order__r.Store__r.DealerNetExternalId__c, YearModel__r.ManufacturingYear__c, YearModel__r.ExternalId__c FROM VehicleConfig__c WHERE Id = '" ++ payload.id ++ "'",
       "referenceId": "OrderBank"
     }] 
-}]]></ee:set-payload>
-			</ee:message>
+}]]></ee:set-variable>
+			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="generic-composite-25-operations" doc:id="2a8f25ef-aea5-4e8a-805c-22e4c766e9fa" name="generic-composite-25-operations"/>
 		<logger level="INFO" doc:name="Logger Composite Response" doc:id="09467379-5eb7-44d5-b696-1c69517abeca" message="Integration: send-order-bank-to-dealernet | correlationId: #[correlationId] | Composite Reponse: #[payload]"/>
