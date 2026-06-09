@@ -160,8 +160,8 @@ fun mapMotBendaPerdida(cod) = cod match {
 
 fun historyMap(field, old, new) = 
     if (field == "created") "Agendamento Criado via Integrador SalesForce"
-    else if (field == "EndDate__c") "A data Final do agendamento foi alterada de " ++ (old default " ") ++ " para " ++ new default " "
+    else if (field == "EndDate__c") "A data Final do agendamento foi alterada de " ++ (old[0 to 15] replace "T" with " " default " ") ++ " para " ++ new[0 to 15] replace "T" with " " default " "
 	else if (field == "Seller__c")  "O usuario responsável foi alterado de " ++ (old default " ") ++ " para " ++ new default " "
-	else if  (field == "StartDate__c") "A data Inicial do agendamento foi alterada de " ++ (old default " ") ++ " para " ++ new default " "
+	else if  (field == "StartDate__c") "A data Inicial do agendamento foi alterada de " ++ (old[0 to 15] replace "T" with " " default " ") ++ " para " ++ new[0 to 15] replace "T" with " " default " "
 	else if (field == "Status__c") "O Status do agendamento foi alterado de " ++ (old default " ") ++ " para " ++ new default " "
 	else  "Agendamento Alterado via Integrador SalesForce"

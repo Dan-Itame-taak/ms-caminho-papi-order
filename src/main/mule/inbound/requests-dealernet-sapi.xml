@@ -170,4 +170,29 @@ output application/json
 			</ee:message>
 		</ee:transform>
 	</sub-flow>
+	<sub-flow name="insert-vehicle-order-bank-to-dealernet" doc:id="748521e4-3f86-4f06-af92-48dda1ebc3d5" >
+		<logger level="INFO" doc:name="Logger" doc:id="8cfcf7a0-06f6-404c-a5d9-9b598825502b" message="Integration: send-order-bank-to-dealernet | correlationId: #[correlationId] | Payload: #[payload]"/>
+		<dealernet-sapi:send-vehicle-to-order-bank doc:name="Send Vehicle to Order Bank" doc:id="dca2297a-8243-4bc0-b8e0-55cbf63b89b0" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}"/>
+		<ee:transform doc:name="Response Payload" doc:id="6a2715c3-792b-4d77-a17e-a05c62140edb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="2eca6afc-220d-4671-9351-202be8a800f3" message="Integration: send-order-bank-to-dealernet | correlationId: #[correlationId] | Order Bank Generated Key: #[payload]" />
+	</sub-flow>
+	<sub-flow name="insert-vehicle-order-bank-history-to-dealernet" doc:id="8651eb92-ea10-4ea9-93d7-8f2bede6ad29" >
+		<logger level="INFO" doc:name="Logger" doc:id="5bd97be3-e3f1-4043-b64c-89d64c0c7f9e" message="Integration: send-order-bank-history-to-dealernet | correlationId: #[correlationId] | Payload: #[payload]" />
+		<dealernet-sapi:send-order-bank-history doc:name="Send Order Bank History" doc:id="3510dec4-4a1d-4d27-80e7-27cf15032ed0" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" config-ref="Dealernet_sapi_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="cf4644f4-998a-45c5-85c8-c5e461b16c2f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
 </mule>

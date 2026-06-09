@@ -3,7 +3,7 @@
     <http:listener-config name="order-papi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
-    <apikit:config name="order-papi-config" api="resource::3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4:order-papi:1.0.7:raml:zip:order-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="order-papi-config" api="resource::3ef2b520-3a61-4eeb-b14c-cd1a42d10fb4:order-papi:1.0.8:raml:zip:order-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <flow name="order-papi-main">
         <http:listener config-ref="order-papi-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
@@ -96,14 +96,18 @@ output application/json
         <flow-ref doc:name="send-service-order-to-salesforce" doc:id="823cf4e5-0f9e-44f5-87fb-2472c32d2f33" name="send-service-order-to-salesforce" />
     </flow>
     <flow name="post:\fandi\credit-analysis\status:application\json:order-papi-config">
-		<ee:transform doc:name="Transform Message" doc:id="61c4efa1-594c-4905-bffb-a385f2b98a8e" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+        <ee:transform doc:name="Transform Message" doc:id="61c4efa1-594c-4905-bffb-a385f2b98a8e">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 [payload]]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<flow-ref doc:name="send-simulations-updates" doc:id="c4c06979-1187-4f62-96e9-bb33be391200" name="send-simulations-updates"/>
+            </ee:message>
+        </ee:transform>
+        <flow-ref doc:name="send-simulations-updates" doc:id="c4c06979-1187-4f62-96e9-bb33be391200" name="send-simulations-updates" />
+    </flow>
+    <flow name="post:\order-bank:application\json:order-papi-config">
+        <logger level="INFO" message="Integration: send-order-bank-to-dealernet | correlationId: #[correlationId] | SalesForceId: #[payload]" />
+		<flow-ref doc:name="send-order-bank-to-dealernet-main" doc:id="d0cb0af0-6f8d-44cc-b0e3-5665810357d3" name="send-order-bank-to-dealernet-main"/>
     </flow>
 </mule>

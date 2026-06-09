@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce-sapi="http://www.mulesoft.org/schema/mule/salesforce-sapi" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/schema/mule/salesforce-sapi/current/mule-salesforce-sapi.xsd">
+	<sub-flow name="send-order-bank-to-dealernet-main" doc:id="9b6db2c7-805e-48e2-8da8-f8025fb47216" >
+		<flow-ref doc:name="search-order-bank-in-salesforce" doc:id="2bcd0128-20b1-48f7-a54b-162842f249c6" name="search-order-bank-in-salesforce"/>
+		<flow-ref doc:name="send-order-bank-to-dealernet" doc:id="146538d4-6a10-4582-86cb-a940189881cc" name="send-order-bank-to-dealernet" target="orderBankResponse"/>
+		<flow-ref doc:name="send-order-bank-history-to-dealernet" doc:id="f6bb08e3-3936-45e0-aaf9-a5299b80fdaa" name="send-order-bank-history-to-dealernet"/>
+		<ee:transform doc:name="Build Final Response to SalesForce" doc:id="54185ad4-91c1-4d43-a94e-344200536136" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+vars.orderBankResponse]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="search-order-bank-in-salesforce" doc:id="6ab33108-0531-4ca6-af4b-ea546f24bfe8" >
+		<ee:transform doc:name="Variables to Composite - Order Bank" doc:id="1cfbf5be-ac92-435f-b5bb-feaa17ba8eef">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+    {
+      "method": "GET",
+      "url": "/services/data/v63.0/query?q=SELECT Account__c, AssemblyDate__c, AssemblyWeek__c, BancoPedidoCodeDN__c, BancoPedidoType__c, Brand__c, ColorExternal__c, CommercialOrderNumber__c, ConfigurationDate__c, CreatedById, CreatedDate, Description__c, DiscountConcessionaria__c, DiscountMontadora__c, ExteriorColor__c, ExteriorColorCode__c, ExternalId__c, Id, InstallmentCode__c, InteriorColor__c, InteriorColorCode__c, InternalColor__c, IsDeleted, LastModifiedById, LastModifiedDate, LastReferencedDate, LastViewedDate, Model__c, Name, Oportunidade__c, OptionalDescription__c, Order__c, OrderNoHaveAsset__c, OwnerId, Product2__c, Quote__c, Status__c, SystemModstamp, VehicleAdaptation__c, VehicleBrandCode__c, VehicleBrandModel__c, VehicleModelCode__c, VehicleModelDescription__c, VehicleModelYear__c, VehicleYear__c, YearManufacture__c, YearModel__c,Order__r.Store__r.DealerNetExternalId__c, YearModel__r.ManufacturingYear__c, YearModel__r.ExternalId__c FROM VehicleConfig__c WHERE Id = '" ++ payload.id ++ "'",
+      "referenceId": "OrderBank"
+    }] 
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="generic-composite-25-operations" doc:id="2a8f25ef-aea5-4e8a-805c-22e4c766e9fa" name="generic-composite-25-operations"/>
+		<logger level="INFO" doc:name="Logger Composite Response" doc:id="09467379-5eb7-44d5-b696-1c69517abeca" message="Integration: send-order-bank-to-dealernet | correlationId: #[correlationId] | Composite Reponse: #[payload]"/>
+	</sub-flow>
+	<sub-flow name="send-order-bank-to-dealernet" doc:id="de113034-39c3-4687-825a-8ff47198c483" >
+		<ee:transform doc:name="Map Payload to Send Order Bank" doc:id="7ea281b5-3d25-4a44-b3a5-19aadadee8e1">
+			<ee:message>
+				<ee:set-payload resource="dwl/map-vehicle-order-bank.dwl" />
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="insert-vehicle-order-bank-to-dealernet" doc:id="816e52cc-33a0-4731-82ba-7c0eda1fdb36" name="insert-vehicle-order-bank-to-dealernet"/>
+		<ee:transform doc:name="Store Dealernet External Id" doc:id="01cbf2ec-62d2-4dca-aead-4ad955dccf5c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	dealerKey: payload.GENERATED_KEYS
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="send-order-bank-history-to-dealernet" doc:id="326b8065-4bbc-4902-b7cf-f7fa61577055" >
+		<ee:transform doc:name="Variables to Send Order Bank History" doc:id="3747a2d6-91a9-4357-acbe-2513acc26026">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	BancoPedido_Codigo: vars.orderBankResponse.dealerKey,
+	BancoPedidoHistorico_Data: ((now() >> "America/Sao_Paulo")[0 to 22]) replace  "T" with " ",
+	BancoPedidoHistorico_Codigo: "CRI",
+	BancoPedidoHistorico_Observacao: "Banco Pedido Criado via integrador SalesForce",
+	BancoPedidoHistorico_UsuCod: 1641
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="insert-vehicle-order-bank-history-to-dealernet" doc:id="c69d1389-befc-4642-835c-9e6ae725f59c" name="insert-vehicle-order-bank-history-to-dealernet"/>
+	</sub-flow>
+</mule>

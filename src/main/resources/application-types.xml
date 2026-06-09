@@ -11,4 +11,6 @@
   <types:enrichment select="#43da1072-d5a3-4b5f-b74e-960906d0d939"/>
   <types:enrichment select="#6494c010-497a-4b5b-92f7-39183f61e7ab"/>
   <types:enrichment select="#11009fb7-f40c-4c92-8bb8-de0b2e11bd40"/>
+  <types:enrichment select="#beec797e-3de2-4b6c-b5ff-bd109d30aba8"/>
+  <types:enrichment select="#75359aac-7105-4e42-b7bb-62efbebd0c40"/>
 </types:mule>

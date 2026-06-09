@@ -120,7 +120,9 @@ output application/json
 ---
 {
     consultantId: payload.compositeResponse.body[1].records[0].Id,
-    productiveId: payload.compositeResponse.body[2].records[0].Id
+    consultantLastDate: payload.compositeResponse.body[1].records[0].LastModifiedDate__c,
+    productiveId: payload.compositeResponse.body[2].records.Id,
+    productiveLastDate: payload.compositeResponse.body[2].records[0].LastModifiedDate__c
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
@@ -149,6 +151,14 @@ output application/json
 				</ee:transform>
 			</otherwise>
 		</choice>
+		<try doc:name="Try" doc:id="b2aacade-2ca0-4a65-a26b-1f7936c359bc">
+			<flow-ref doc:name="register-service-history-subflow" doc:id="f104dbc5-af56-4b26-8c3e-cbf3d266e8e4" name="register-service-history-subflow" target="history" />
+				<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1fc744ce-204a-46ca-9821-565229b14d8c">
+					<logger level="INFO" doc:name="Logger Error" doc:id="ba6f8606-c826-4dbb-b63c-045a6a903f5c" message="Erro ao enviar historico" />
+				</on-error-continue>
+			</error-handler>
+		</try>
 		<ee:transform doc:name="Productive appointment Payload sended to Dealernet" doc:id="8151a1fd-3fc3-4c4c-80ea-399491cea289" >
 			<ee:message >
 			</ee:message>
@@ -195,6 +205,19 @@ lineItems map (lineItem, index) -> {
 			</ee:variables>
 		</ee:transform>
 		<foreach doc:name="Iterate Productive Request " doc:id="06f3c0c1-62d6-4097-b41d-21e18d6fd28e" collection="#[vars.productiveRequest]">
+			<ee:transform doc:name="Variable ParentId" doc:id="b3429e6f-7861-463d-bfb6-342f2c2277a6" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="parentIdProd" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	productiveId: vars.parentId.productiveId[(vars.counter - 1)],
+	productiveLastDate: vars.parentId.productiveLastDate
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
 			<choice doc:name="Choice" doc:id="f43293dc-bd65-4030-8766-237ef1d2da25" >
 				<when expression="#[payload.OficinaServico_Codigo == null]">
 					<dealernet-sapi:create-service-order doc:name="Create service order" doc:id="daa183b0-259c-498f-85c9-2d7cd7185426" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveResponse">
@@ -261,15 +284,15 @@ vars.productiveEndDate ++ {operacao: "Atualizar"}]]></ee:set-variable>
 						</dealernet-sapi:send-service-order-end-date>
 				</otherwise>
 			</choice>
-		</foreach>
-		<try doc:name="Try" doc:id="3e55b009-f515-4634-b2fe-dff8e9bdf0ce" >
-			<flow-ref doc:name="register-service-and-OS-history-subflow" doc:id="f104dbc5-af56-4b26-8c3e-cbf3d266e8e4" name="register-service-and-OS-history-subflow" target="history" />
-			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6d926dd2-a1c0-484a-a597-83fadab3a224" >
-					<logger level="INFO" doc:name="Logger Error" doc:id="0b1a55d4-f0ab-46b5-8b05-114b9225c569" message="Erro ao enviar historico"/>
+			<try doc:name="Try" doc:id="3e55b009-f515-4634-b2fe-dff8e9bdf0ce">
+			<flow-ref doc:name="OS-history-subflow" doc:id="7849edfa-054a-41ff-8694-3176896e41a9" name="OS-history-subflow" />
+				<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6d926dd2-a1c0-484a-a597-83fadab3a224">
+					<logger level="INFO" doc:name="Logger Error" doc:id="0b1a55d4-f0ab-46b5-8b05-114b9225c569" message="Erro ao enviar historico" />
 				</on-error-continue>
 			</error-handler>
 		</try>
+		</foreach>
 		<ee:transform doc:name="Build Final Response" doc:id="11009fb7-f40c-4c92-8bb8-de0b2e11bd40">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
@@ -319,7 +342,7 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT AssessmentUsedDealerNetCode__c, EndDate, Asset__r.ExternalId__c, Asset__r.ModelCode__c, Asset__r.Product2.Name, Asset__r.Product2.VehicleFamilyCode__c, Asset__r.StockCode__c, Asset__r.Version__c, CreatedDate, DealerNetServiceCode__c, Description, EffectiveDate, ExternalIdDealerNet__c, MainContact__r.ContactPreference__c, OrderNumber, Store__r.DealerNetExternalId__c, TotalAmount, CommissionPercentage__c FROM Order WHERE Id = '"++ vars.orderId ++"'",
+      "url": "/services/data/v63.0/query?q=SELECT AssessmentUsedDealerNetCode__c, EndDate, Asset__r.ExternalId__c, Asset__r.ModelCode__c, Asset__r.Product2.Name, Asset__r.Product2.VehicleFamilyCode__c, Asset__r.StockCode__c, Asset__r.Version__c, CreatedDate, DealerNetServiceCode__c, Description, EffectiveDate, ExternalIdDealerNet__c, MainContact__r.ContactPreference__c, OrderNumber, Store__r.DealerNetExternalId__c, TotalAmount, CommissionPercentage__c, , (SELECT ExternalId__c FROM Configura_es_de_ve_culo__r LIMIT 1) FROM Order WHERE Id = '"++ vars.orderId ++"'",
       "referenceId": "OrderQuery"
     },
     {
@@ -353,20 +376,6 @@ output application/json
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 		<logger level="INFO" doc:name="Logger Before Map" doc:id="8f18cfc8-79fc-445f-b4f6-ed2e668c8d1b" message="Integration: send-proposal-to-dealernet | correlationId: #[correlationId] | payload: #[payload]" />
-		<!-- [STUDIO:"Choice"]<choice doc:name="Choice" doc:id="98be07a5-def6-4465-aaa4-5248bf515b19" >
-			<when expression="CAMPO FLAG PARA VENDA DIRETA">
-				<ee:transform doc:name="Direct Sale Proposal Payload to Dealernet" doc:id="4595fb1c-bd95-46a7-ab36-79589357ad92" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
-&#45;&#45;-
-{
-}&#93;&#93;></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-				<flow-ref doc:name="Flow Reference" doc:id="21cf984d-f78b-4845-8a20-31f8d9490562" />
-			</when>
-		</choice> [STUDIO] -->
 		<ee:transform doc:name="Proposal Payload send to Dealernet" doc:id="d2c057d7-f417-46a1-b508-759664fb82d2" >
 			<ee:message >
 			</ee:message>
@@ -383,7 +392,7 @@ var enviaSms = if(orders.MainContact__r.ContactPreference__c contains ("Telefone
 {
 	"Proposta_EmpresaCod": orders.Store__r.DealerNetExternalId__c,
 	"Proposta_VeiculoCod": orders.Asset__r.ExternalId__c,
-	"Proposta_BancoPedidoCod": orders.campo,
+	"Proposta_BancoPedidoCod": orders."Configura_es_de_ve_culo__r".records[0].ExternalId__c,
 	"Proposta_Pedido": orders.OrderNumber,
 	"Proposta_Versao": 1,
 	"Proposta_Valor": orders.TotalAmount,
@@ -956,11 +965,11 @@ orderItems map (item) -> {
 	</sub-flow>
 	<sub-flow name="generic-composite-25-operations" doc:id="37540dba-570f-4348-9c71-8180f6e5a247" >
 		<logger level="INFO" doc:name="Logger Before Generic Composite" doc:id="0233f898-2b29-4ba7-b510-b7d7af67d68e" message="Integration: #[vars.integration] | CorrelationId: #[correlationId] | Query: #[vars.compositeRequest]"/>
-		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="e490785f-2127-43ca-b4df-437888658cbc" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_id}">
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="e490785f-2127-43ca-b4df-437888658cbc" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
 			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeRequest]]]></salesforce-sapi:composite-de_25-operaes-request-data>
 		</salesforce-sapi:composite-de_25-operaes>
 	</sub-flow>
-	<sub-flow name="register-service-and-OS-history-subflow" doc:id="65e97c2d-8fcc-47b6-89e8-416c1f4b18b8" >
+	<sub-flow name="register-service-history-subflow" doc:id="65e97c2d-8fcc-47b6-89e8-416c1f4b18b8" >
 		<ee:transform doc:name="Set Composite" doc:id="1a0fcd04-16fa-4d7a-b577-f3cb7581a956" >
 			<ee:message >
 			</ee:message>
@@ -973,15 +982,9 @@ output application/json skipNullOn = 'everywhere'
   "compositeRequest": [
   	if (vars.parentId.consultantId != null) {
 	  "method": "GET",
-	  "url": "/services/data/v63.0/query?q=SELECT CreatedDate, DataType, Field, NewValue, OldValue, Parent.ApiNameRecordType__c, ParentId, Parent.ExternalId__c FROM Scheduling__History WHERE (Parent.LastModifiedDate__c >= 2026-05-10T10:45:06Z OR Parent.LastModifiedDate__c = null) AND ParentId = '" ++ vars.parentId.consultantId ++ "' ORDER BY CreatedDate ASC",
+	  "url": "/services/data/v63.0/query?q=SELECT CreatedDate, DataType, Field, FORMAT(NewValue), FORMAT(OldValue), Parent.ApiNameRecordType__c, ParentId, Parent.ExternalId__c, Parent.LastModifiedDate__c FROM Scheduling__History WHERE (Parent.LastModifiedDate__c >= 2026-05-10T10:45:06Z OR Parent.LastModifiedDate__c = null) AND  DataType != 'EntityId' AND ParentId = '" ++ vars.parentId.consultantId ++ "' ORDER BY CreatedDate ASC",
 	  "referenceId": "consultantHistory"
 	}
-	else null,
-	if( vars.parentId.productiveId != null) {
-	  "method": "GET",
-	  "url": "/services/data/v63.0/query?q=SELECT CreatedDate, DataType, Field, NewValue, OldValue, Parent.ApiNameRecordType__c, ParentId, Parent.ExternalId__c FROM Scheduling__History WHERE (Parent.LastModifiedDate__c >= 2026-05-10T10:45:06Z OR Parent.LastModifiedDate__c = null) AND ParentId = '" ++ vars.parentId.productiveId ++ "' ORDER BY CreatedDate ASC",
-	  "referenceId": "productiveHistory"
-	  }
 	else null
 	]
 }
@@ -998,31 +1001,123 @@ output application/json skipNullOn = 'everywhere'
 					<ee:set-variable variableName="consultHistory"><![CDATA[%dw 2.0
 import historyMap from Modules::orderFunctions
 var consult = vars.compositeHistory.compositeResponse.body[0].records
+var firstFilter = consult map (value,index) -> {
+	Field: value.Field,
+	OldValue: if (value.Field == "StartDate__c" or value.Field == "EndDate__c")
+	(value.OldValue[0 to 22] as DateTime - |PT3H|) as String replace "T" with " "
+	else 
+	value.OldValue,
+	NewValue: if (value.Field == "StartDate__c" or value.Field == "EndDate__c")
+	(value.NewValue[0 to 22] as DateTime - |PT3H|) as String replace "T" with " "
+	else 
+	value.NewValue,
+	CreatedDate: value.CreatedDate
+}
+var filterConsult = firstFilter map (value, index) -> {
+    agCode: vars.consultantResponse.GENERATED_KEYS,
+    obs: historyMap(value.Field, value.OldValue, value.NewValue),
+    operation: if (value.Field == "created") "CRI" else "ALT",
+    date: value.CreatedDate
+}
 output application/json
 ---
-consult map (value, index) -> {
-    agCode: value.Parent.ExternalId__c,
-    obs: historyMap(value.Field, value.OldValue, value.NewValue),
-    operation: if (value.Field == "created") "CRI" else "ALT"
-}]]></ee:set-variable>
-					<ee:set-variable variableName="productiveHistory"><![CDATA[%dw 2.0
-import historyMap from Modules::orderFunctions
-var prod = vars.compositeHistory.compositeResponse.body[1].records
-output application/json
----
-prod map (value, index) -> {
-    osCode: value.Parent.ExternalId__c,
-    obs: historyMap(value.Field, value.OldValue, value.NewValue),
-    operation: if (value.Field == "created") "CRI" else "ALT"
-}]]></ee:set-variable>
+if (!isBlank(vars.parentId.consultantLastDate)) filterConsult filter ((item, index) -> (item.date[0 to 22]) as DateTime - |PT3H|  >= (vars.parentId.consultantLastDate[0 to 22]) as DateTime)
+else filterConsult]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
 		<foreach doc:name="For Each" doc:id="4b5d7118-c5b9-4d40-9d7c-fa98230fcc93" collection="#[vars.consultHistory]">
 			<dealernet-sapi:send-register-service-history doc:name="Send Register Service History" doc:id="cda63c3f-6689-4529-8f42-684104d28a5d" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="consultantHistory">
 			</dealernet-sapi:send-register-service-history>
+			<logger level="INFO" doc:name="Logger" doc:id="d4f00417-0afb-4b47-979d-c15a826d9751" message="Integration: send-consultant-history | payload: #[payload]"/>
 			</foreach>
+		<salesforce-sapi:update-last-modified-date-in-consultant-scheduling doc:name="Update Last Modified Date in Consultant Scheduling" doc:id="67c76a65-851c-42e4-8653-c798d53e4e64" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
+			<salesforce-sapi:update-last-modified-date-in-consultant-scheduling-request-data ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	allOrNone: false,
+	records: [{
+        attributes: {
+            "type": "Scheduling__c"
+            },
+        Id: vars.parentId.consultantId,
+        LastModifiedDate__c: (now() >> "America/Sao_Paulo") - |PT3H|
+	}] 
+}]]]></salesforce-sapi:update-last-modified-date-in-consultant-scheduling-request-data>
+		</salesforce-sapi:update-last-modified-date-in-consultant-scheduling>
+	</sub-flow>
+	<sub-flow name="OS-history-subflow" doc:id="56efcec0-781d-40bc-bc77-7707fb2198ba" >
+		<ee:transform doc:name="Set Composite" doc:id="2de1a29a-7012-49ac-88a4-92e8c9441ba5" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="compositeHistory" ><![CDATA[%dw 2.0
+output application/json skipNullOn = 'everywhere'
+---
+{
+  "allOrNone": false,
+  "compositeRequest": [
+	if( vars.parentIdProd.productiveId != null) {
+	  "method": "GET",
+	  "url": "/services/data/v63.0/query?q=SELECT CreatedDate, DataType, Field, FORMAT(NewValue), FORMAT(OldValue), Parent.ApiNameRecordType__c, ParentId, Parent.ExternalId__c, Parent.LastModifiedDate__c FROM Scheduling__History WHERE (Parent.LastModifiedDate__c >= 2026-05-10T10:45:06Z OR Parent.LastModifiedDate__c = null) AND  DataType != 'EntityId' AND ParentId = '" ++ vars.parentIdProd.productiveId ++ "' ORDER BY CreatedDate ASC",
+	  "referenceId": "productiveHistory"
+	  }
+	else null
+	]
+}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce-sapi:composite-de_25-operaes doc:name="Composite de 25 operações" doc:id="ef05abb3-8ec7-454b-80a9-25f674af4d17" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}" target="compositeHistory" >
+			<salesforce-sapi:composite-de_25-operaes-request-data ><![CDATA[#[vars.compositeHistory]]]></salesforce-sapi:composite-de_25-operaes-request-data>
+		</salesforce-sapi:composite-de_25-operaes>
+		<ee:transform doc:name="Variables to send history" doc:id="beec797e-3de2-4b6c-b5ff-bd109d30aba8" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="productiveHistory" ><![CDATA[%dw 2.0
+import historyMap from Modules::orderFunctions
+var prod = vars.compositeHistory.compositeResponse.body[0].records
+var firstFilter = prod map (value,index) -> {
+	Field: value.Field,
+	OldValue: if (value.Field == "StartDate__c" or value.Field == "EndDate__c")
+	(value.OldValue[0 to 22] as DateTime - |PT3H|) as String replace "T" with " "
+	else 
+	value.OldValue,
+	NewValue: if (value.Field == "StartDate__c" or value.Field == "EndDate__c")
+	(value.NewValue[0 to 22] as DateTime - |PT3H|) as String replace "T" with " "
+	else 
+	value.NewValue,
+	CreatedDate: value.CreatedDate
+}
+var filterProd = firstFilter map (value, index) -> {
+    osCode: vars.productiveResponse.GENERATED_KEYS,
+    obs: historyMap(value.Field, value.OldValue, value.NewValue),
+    operation: if (value.Field == "created") "CRI" else "ALT",
+    date: value.CreatedDate
+}
+output application/json
+---
+if (!isBlank(vars.parentIdProd.productiveLastDate)) filterProd filter ((item, index) -> (item.date[0 to 22]) as DateTime - |PT3H|  >= (vars.parentIdProd.productiveLastDate[0 to 22]) as DateTime)
+else filterProd]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
 		<foreach doc:name="For Each" doc:id="fb0c3cf5-8a82-4b7c-aa41-f1118055bb35" collection="#[vars.productiveHistory]">
 				<dealernet-sapi:send-service-order-history doc:name="Send Service Order History" doc:id="186d162f-6588-4775-8761-7b5d98dbc136" config-ref="Dealernet_sapi_Config" client-id="${secure::dealernet-sapi.client_id}" client-secret="${secure::dealernet-sapi.client_secret}" target="productiveHistory" />
+			<logger level="INFO" doc:name="Logger" doc:id="a9135b37-1f3f-4b9f-bd04-e5796226ef2d" message="Integration: send-productive-history | payload: #[payload]" />
 			</foreach>
+		<salesforce-sapi:update-last-modified-date-in-productive-scheduling doc:name="Update Last Modified Date in Productive Scheduling" doc:id="4e0c15f4-8828-4238-ae0c-b610e94bd25c" config-ref="Salesforce_sapi_Config" client-id="${secure::salesforce-sapi.client_id}" client-secret="${secure::salesforce-sapi.client_secret}">
+			<salesforce-sapi:update-last-modified-date-in-productive-scheduling-request-data><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	allOrNone: false,
+	records: [{
+        attributes: {
+            "type": "Scheduling__c"
+            },
+        Id: vars.parentIdProd.productiveId,
+        LastModifiedDate__c: (now() >> "America/Sao_Paulo") - |PT3H|
+	}] 
+}]]]></salesforce-sapi:update-last-modified-date-in-productive-scheduling-request-data>
+		</salesforce-sapi:update-last-modified-date-in-productive-scheduling>
 	</sub-flow>
 </mule>
