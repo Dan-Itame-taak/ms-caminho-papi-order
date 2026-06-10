@@ -12,7 +12,7 @@ http://www.mulesoft.org/schema/mule/salesforce-sapi http://www.mulesoft.org/sche
 		<ee:transform doc:name="Build Final Response to SalesForce" doc:id="54185ad4-91c1-4d43-a94e-344200536136" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
+output application/json
 ---
 vars.orderBankResponse]]></ee:set-payload>
 			</ee:message>
@@ -31,7 +31,7 @@ output application/json
   "compositeRequest": [
     {
       "method": "GET",
-      "url": "/services/data/v63.0/query?q=SELECT Account__c, AssemblyDate__c, AssemblyWeek__c, BancoPedidoCodeDN__c, BancoPedidoType__c, Brand__c, ColorExternal__c, CommercialOrderNumber__c, ConfigurationDate__c, CreatedById, CreatedDate, Description__c, DiscountConcessionaria__c, DiscountMontadora__c, ExteriorColor__c, ExteriorColorCode__c, ExternalId__c, Id, InstallmentCode__c, InteriorColor__c, InteriorColorCode__c, InternalColor__c, IsDeleted, LastModifiedById, LastModifiedDate, LastReferencedDate, LastViewedDate, Model__c, Name, Oportunidade__c, OptionalDescription__c, Order__c, OrderNoHaveAsset__c, OwnerId, Product2__c, Quote__c, Status__c, SystemModstamp, VehicleAdaptation__c, VehicleBrandCode__c, VehicleBrandModel__c, VehicleModelCode__c, VehicleModelDescription__c, VehicleModelYear__c, VehicleYear__c, YearManufacture__c, YearModel__c,Order__r.Store__r.DealerNetExternalId__c, YearModel__r.ManufacturingYear__c, YearModel__r.ExternalId__c FROM VehicleConfig__c WHERE Id = '" ++ payload.id ++ "'",
+      "url": "/services/data/v63.0/query?q=SELECT Account__c, AssemblyDate__c, AssemblyWeek__c, BancoPedidoCodeDN__c, BancoPedidoType__c, Brand__c, ColorExternal__c, CommercialOrderNumber__c, ConfigurationDate__c, CreatedById, CreatedDate, Description__c, DiscountConcessionaria__c, DiscountMontadora__c, ColorExternal__r.ExternalId__c, ExteriorColorCode__c, ExternalId__c, Id, InstallmentCode__c, InteriorColor__c, InternalColor__r.ExternalId__c, InternalColor__c, IsDeleted, LastModifiedById, LastModifiedDate, LastReferencedDate, LastViewedDate, Model__c, Name, Oportunidade__c, OptionalDescription__c, Order__c, OrderNoHaveAsset__c, OwnerId, Product2__c, Quote__c, Status__c, SystemModstamp, VehicleAdaptation__c, VehicleBrandCode__c, VehicleBrandModel__c, VehicleModelCode__c, VehicleModelDescription__c, VehicleModelYear__c, VehicleYear__c, YearManufacture__c, YearModel__c,Order__r.Store__r.DealerNetExternalId__c, YearModel__r.ManufacturingYear__c, YearModel__r.ExternalId__c, VehicleParam__r.ExternalId__c FROM VehicleConfig__c WHERE Order__c = '" ++ payload.id ++ "'",
       "referenceId": "OrderBank"
     }] 
 }]]></ee:set-variable>
